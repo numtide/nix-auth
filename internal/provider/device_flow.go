@@ -32,4 +32,3 @@ func ShowWaitingMessage() {
 	fmt.Println()
 	fmt.Println("Waiting for authorization...")
 }
-

@@ -10,6 +10,12 @@ type Provider interface {
 	// Host returns the default host for this provider
 	Host() string
 
+	// SetHost sets a custom host for this provider
+	SetHost(host string)
+
+	// SetClientID sets a custom OAuth client ID for this provider
+	SetClientID(clientID string)
+
 	// Authenticate performs the OAuth flow and returns an access token
 	Authenticate(ctx context.Context) (string, error)
 

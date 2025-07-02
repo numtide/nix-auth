@@ -8,7 +8,7 @@ import (
 
 // makeAuthenticatedRequest creates and executes an authenticated HTTP request
 // with common error handling for authentication providers
-func makeAuthenticatedRequest(ctx context.Context, method, url, token, authHeader string, headers map[string]string) (*http.Response, error) {
+func makeAuthenticatedRequest(ctx context.Context, method, url, authHeader string, headers map[string]string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
@@ -40,4 +40,3 @@ func makeAuthenticatedRequest(ctx context.Context, method, url, token, authHeade
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 }
-

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -16,12 +15,18 @@ func init() {
 }
 
 type GitLabProvider struct {
-	host string
+	host     string
+	clientID string
 }
 
 // SetHost sets a custom host for the GitLab provider
 func (g *GitLabProvider) SetHost(host string) {
 	g.host = host
+}
+
+// SetClientID sets a custom OAuth client ID for the GitLab provider
+func (g *GitLabProvider) SetClientID(clientID string) {
+	g.clientID = clientID
 }
 
 // getBaseURL returns the base URL for API calls
@@ -59,7 +64,7 @@ func (g *GitLabProvider) makeGitLabAPIRequest(ctx context.Context, token string,
 	headers := map[string]string{
 		"Accept": "application/json",
 	}
-	return makeAuthenticatedRequest(ctx, "GET", endpoint, token, "Bearer "+token, headers)
+	return makeAuthenticatedRequest(ctx, "GET", endpoint, "Bearer "+token, headers)
 }
 
 func (g *GitLabProvider) Name() string {
@@ -79,8 +84,7 @@ func (g *GitLabProvider) GetScopes() []string {
 }
 
 func (g *GitLabProvider) Authenticate(ctx context.Context) (string, error) {
-	// Check for GitLab client ID in environment
-	clientID := os.Getenv("GITLAB_CLIENT_ID")
+	clientID := g.clientID
 	if clientID == "" {
 		if g.host == "gitlab.com" || g.host == "" {
 			// FIXME: taken from https://gitlab.com/gitlab-org/cli/-/issues/1338
@@ -97,9 +101,11 @@ func (g *GitLabProvider) Authenticate(ctx context.Context) (string, error) {
 			fmt.Println("   - Scopes: ☑ read_api")
 			fmt.Println("3. Copy the Application ID")
 			fmt.Println("\nThen run:")
+			fmt.Printf("  nix-auth login gitlab --host %s --client-id <your-application-id>\n", g.host)
+			fmt.Println("\nOr set the GITLAB_CLIENT_ID environment variable:")
 			fmt.Println("  export GITLAB_CLIENT_ID=<your-application-id>")
-			fmt.Println("  nix-auth login gitlab")
-			return "", fmt.Errorf("GITLAB_CLIENT_ID environment variable not set")
+			fmt.Printf("  nix-auth login gitlab --host %s\n", g.host)
+			return "", fmt.Errorf("client ID required for GitLab self-hosted (use --client-id flag or GITLAB_CLIENT_ID env var)")
 		}
 	}
 

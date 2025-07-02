@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/numtide/nix-auth/internal/config"
@@ -16,19 +17,22 @@ var loginCmd = &cobra.Command{
 	Short: "Authenticate with a provider and save the access token",
 	Long: `Authenticate with a provider (GitHub, GitLab, etc.) using OAuth device flow
 and save the access token to your nix.conf for use with Nix flakes.`,
-	Example: `  nix-auth login          # defaults to GitHub
+	Example: `  nix-auth login                      # defaults to GitHub
   nix-auth login github
-  nix-auth login gitlab`,
+  nix-auth login gitlab
+  nix-auth login github --host github.company.com --client-id abc123`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runLogin,
 }
 
 var (
-	loginHost string
+	loginHost     string
+	loginClientID string
 )
 
 func init() {
 	loginCmd.Flags().StringVar(&loginHost, "host", "", "Custom host (e.g., github.company.com)")
+	loginCmd.Flags().StringVar(&loginClientID, "client-id", "", "OAuth client ID (required for self-hosted instances)")
 }
 
 func runLogin(cmd *cobra.Command, args []string) error {
@@ -48,10 +52,24 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	host := prov.Host()
 	if loginHost != "" {
 		host = loginHost
-		// Set custom host for GitLab provider
-		if gitlabProv, ok := prov.(*provider.GitLabProvider); ok {
-			gitlabProv.SetHost(host)
+	}
+
+	// Always set the host (even if it's the default)
+	prov.SetHost(host)
+
+	// Set client ID: use flag, fallback to environment variable
+	clientID := loginClientID
+	if clientID == "" {
+		// Check provider-specific environment variable
+		switch providerName {
+		case "github":
+			clientID = os.Getenv("GITHUB_CLIENT_ID")
+		case "gitlab":
+			clientID = os.Getenv("GITLAB_CLIENT_ID")
 		}
+	}
+	if clientID != "" {
+		prov.SetClientID(clientID)
 	}
 
 	fmt.Printf("Authenticating with %s (%s)...\n", prov.Name(), host)

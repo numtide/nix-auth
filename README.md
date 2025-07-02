@@ -9,7 +9,7 @@ to get those tokens in the right place.
 ## Features
 
 - OAuth device flow authentication (no manual token creation needed)
-- Support for multiple providers (GitHub and GitLab)
+- Support for multiple providers (GitHub, GitHub Enterprise, and GitLab)
 - Secure token storage in `~/.config/nix/nix.conf`
 - Token validation and status checking
 - Automatic backup creation before modifying configuration
@@ -73,11 +73,27 @@ Authenticate with GitLab:
 nix-auth login gitlab
 ```
 
+Authenticate with GitHub Enterprise or GitLab self-hosted:
+
+```bash
+# GitHub Enterprise
+nix-auth login github --host github.company.com --client-id <your-client-id>
+
+# GitLab self-hosted
+nix-auth login gitlab --host gitlab.company.com --client-id <your-application-id>
+```
+
 The tool will:
 1. Display a one-time code
 2. Open your browser to the provider's device authorization page
 3. Wait for you to authorize the application
 4. Save the token to `~/.config/nix/nix.conf`
+
+**Note for self-hosted instances**:
+- **GitHub Enterprise**: You'll need to create an OAuth App and provide the client ID via `--client-id`
+- **GitLab self-hosted**: You'll need to create an OAuth application and provide the client ID via `--client-id`
+
+The tool will guide you through this process if the client ID is not provided. You can also set the `GITHUB_CLIENT_ID` or `GITLAB_CLIENT_ID` environment variables as an alternative to the `--client-id` flag.
 
 ### Check Status
 
@@ -95,10 +111,16 @@ Remove a token interactively:
 nix-auth logout
 ```
 
-Or remove a specific provider's token:
+Remove a specific provider's token:
 
 ```bash
 nix-auth logout github
+```
+
+Remove a token for a specific host:
+
+```bash
+nix-auth logout --host github.company.com
 ```
 
 ## How It Works
@@ -107,7 +129,7 @@ The tool manages the `access-tokens` configuration in your `~/.config/nix/nix.co
 
 Example configuration added by this tool:
 ```
-access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxxx
+access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxxx github.company.com=ghp_yyyyyyyy
 ```
 
 ## Security
@@ -119,7 +141,7 @@ access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxx
 
 ## Future Plans
 
-- Support for more providers; Gitea / Forgego / GitHub Enterprise / ...
+- Support for more providers (Gitea, Forgejo, Bitbucket, etc.)
 - Token expiration notifications
 - Integration with system keychains for secure storage (will require patching
     Nix)
