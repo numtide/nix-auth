@@ -233,13 +233,26 @@ func (n *NixConfig) readAccessTokens() (map[string]string, error) {
 func (n *NixConfig) parseAccessTokensLine(line string) (map[string]string, error) {
 	tokens := make(map[string]string)
 
-	// Remove "access-tokens = " prefix
-	parts := strings.SplitN(line, "=", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid access-tokens line format")
+	// Find the position of "access-tokens"
+	idx := strings.Index(line, "access-tokens")
+	if idx == -1 {
+		return nil, fmt.Errorf("invalid access-tokens line")
 	}
 
-	tokenPairs := strings.Fields(parts[1])
+	// Find the equals sign after "access-tokens"
+	eqIdx := strings.Index(line[idx:], "=")
+	if eqIdx == -1 {
+		return nil, fmt.Errorf("invalid access-tokens line format")
+	}
+	eqIdx += idx
+
+	// Get the token pairs after the equals sign
+	tokenPart := strings.TrimSpace(line[eqIdx+1:])
+	if tokenPart == "" {
+		return tokens, nil
+	}
+
+	tokenPairs := strings.Fields(tokenPart)
 	for _, pair := range tokenPairs {
 		hostToken := strings.SplitN(pair, "=", 2)
 		if len(hostToken) != 2 {
