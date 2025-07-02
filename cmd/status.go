@@ -85,7 +85,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			statusStr = fmt.Sprintf("✗ Invalid - %v", validationErr)
 		} else {
 			statusStr = "✓ Valid"
-			
+
 			// Get user info if valid
 			username, fullName, err := prov.GetUserInfo(ctx, token)
 			if err == nil {

@@ -9,7 +9,7 @@ to get those tokens in the right place.
 ## Features
 
 - OAuth device flow authentication (no manual token creation needed)
-- Support for multiple providers (currently GitHub, with GitLab support planned)
+- Support for multiple providers (GitHub and GitLab)
 - Secure token storage in `~/.config/nix/nix.conf`
 - Token validation and status checking
 - Automatic backup creation before modifying configuration
@@ -35,7 +35,7 @@ Or add to your system configuration:
 ```nix
 {
   inputs.nix-auth.url = "github:numtide/nix-auth";
-  
+
   # In your system packages
   environment.systemPackages = [
     inputs.nix-auth.packages.${system}.default
@@ -67,9 +67,15 @@ Authenticate with GitHub (default provider):
 nix-auth login
 ```
 
+Authenticate with GitLab:
+
+```bash
+nix-auth login gitlab
+```
+
 The tool will:
 1. Display a one-time code
-2. Open your browser to GitHub's device authorization page
+2. Open your browser to the provider's device authorization page
 3. Wait for you to authorize the application
 4. Save the token to `~/.config/nix/nix.conf`
 
@@ -101,20 +107,19 @@ The tool manages the `access-tokens` configuration in your `~/.config/nix/nix.co
 
 Example configuration added by this tool:
 ```
-access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx
+access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxxx
 ```
 
 ## Security
 
 - Tokens are stored locally in your Nix configuration
 - The tool creates automatic backups before modifying your configuration
-- Uses GitHub's official OAuth device flow for secure authentication
-- Minimal required permissions (only `repo` scope for accessing repositories)
+- Uses OAuth device flow for secure authentication
+- Minimal required permissions (only necessary scopes for accessing repositories)
 
 ## Future Plans
 
-- GitLab support
-- Support for custom GitHub Enterprise instances
+- Support for more providers; Gitea / Forgego / GitHub Enterprise / ...
 - Token expiration notifications
 - Integration with system keychains for secure storage (will require patching
     Nix)

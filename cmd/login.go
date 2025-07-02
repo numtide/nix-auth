@@ -48,6 +48,10 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	host := prov.Host()
 	if loginHost != "" {
 		host = loginHost
+		// Set custom host for GitLab provider
+		if gitlabProv, ok := prov.(*provider.GitLabProvider); ok {
+			gitlabProv.SetHost(host)
+		}
 	}
 
 	fmt.Printf("Authenticating with %s (%s)...\n", prov.Name(), host)
@@ -87,7 +91,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save token: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully authenticated and saved token for %s\n", host)
+	fmt.Printf("\nSuccessfully authenticated and saved token for %s\n", host)
 	fmt.Printf("Token saved to: %s\n", cfg.GetPath())
 
 	return nil

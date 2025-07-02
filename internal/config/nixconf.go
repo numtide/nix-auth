@@ -271,7 +271,7 @@ func (n *NixConfig) formatAccessTokensLine(tokens map[string]string) string {
 		hosts = append(hosts, host)
 	}
 	sort.Strings(hosts)
-	
+
 	var pairs []string
 	for _, host := range hosts {
 		pairs = append(pairs, fmt.Sprintf("%s=%s", host, tokens[host]))

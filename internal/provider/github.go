@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cli/browser"
 	"github.com/cli/oauth/device"
 )
 
@@ -19,32 +18,10 @@ type GitHubProvider struct{}
 
 // makeGitHubAPIRequest is a helper function to make authenticated requests to GitHub API
 func (g *GitHubProvider) makeGitHubAPIRequest(ctx context.Context, token string, endpoint string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
-	if err != nil {
-		return nil, err
+	headers := map[string]string{
+		"Accept": "application/vnd.github.v3+json",
 	}
-
-	req.Header.Set("Authorization", "token "+token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check status codes
-	if resp.StatusCode == http.StatusUnauthorized {
-		resp.Body.Close()
-		return nil, fmt.Errorf("token is invalid or expired")
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return resp, nil
+	return makeAuthenticatedRequest(ctx, "GET", endpoint, token, "token "+token, headers)
 }
 
 func (g *GitHubProvider) Name() string {
@@ -72,16 +49,9 @@ func (g *GitHubProvider) Authenticate(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to request device code: %w", err)
 	}
 
-	fmt.Printf("First, copy your one-time code: %s\n", code.UserCode)
-	fmt.Printf("Then press Enter to open github.com in your browser...\n")
-	fmt.Scanln()
-
-	// Open browser
-	if err := browser.OpenURL(code.VerificationURI); err != nil {
-		fmt.Printf("Failed to open browser. Please visit: %s\n", code.VerificationURI)
-	}
-
-	fmt.Println("Waiting for authorization...")
+	DisplayDeviceCode(code.UserCode)
+	DisplayURLAndOpenBrowser(code.VerificationURI)
+	ShowWaitingMessage()
 
 	// Wait for user to authorize
 	accessToken, err := device.Wait(ctx, httpClient, "https://github.com/login/oauth/access_token", device.WaitOptions{

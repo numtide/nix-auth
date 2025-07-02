@@ -573,7 +573,7 @@ func TestExpandTilde(t *testing.T) {
 		{"~/config/nix.conf", filepath.Join(homeDir, "config/nix.conf")},
 		{"/absolute/path", "/absolute/path"},
 		{"relative/path", "relative/path"},
-		{"~", "~"}, // tilde alone is not expanded
+		{"~", "~"},                   // tilde alone is not expanded
 		{"~user/path", "~user/path"}, // other user's home is not expanded
 	}
 
@@ -694,7 +694,7 @@ extra-option = value
 
 	// Check that all formatting is preserved
 	contentStr := string(content)
-	
+
 	// Check specific formatting patterns are preserved
 	patterns := []struct {
 		name    string
@@ -719,7 +719,7 @@ extra-option = value
 	lines := strings.Split(contentStr, "\n")
 	modifiedLines := 0
 	var accessTokensLine string
-	
+
 	originalLines := strings.Split(initialContent, "\n")
 	for i, line := range lines {
 		if i < len(originalLines) {
@@ -774,7 +774,7 @@ another-option = value`
 	}
 
 	lines := strings.Split(string(content), "\n")
-	
+
 	// Find the access-tokens line
 	for _, line := range lines {
 		if strings.Contains(line, "access-tokens") {
