@@ -10,7 +10,7 @@ to get those tokens in the right place.
 
 - OAuth device flow authentication (no manual token creation needed)
 - Support for multiple providers (GitHub, GitHub Enterprise, and GitLab)
-- Secure token storage in `~/.config/nix/nix.conf`
+- Token storage in `~/.config/nix/nix.conf`
 - Token validation and status checking
 - Automatic backup creation before modifying configuration
 
