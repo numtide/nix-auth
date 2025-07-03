@@ -198,7 +198,7 @@ func (n *NixConfig) readConfigLines() ([]string, error) {
 }
 
 func (n *NixConfig) writeConfigLines(lines []string) error {
-	file, err := os.OpenFile(n.path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(n.path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open config file: %w", err)
 	}
@@ -284,7 +284,7 @@ func (n *NixConfig) createBackup(backupPath string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(backupPath, input, 0644)
+	return os.WriteFile(backupPath, input, 0600)
 }
 
 // expandTilde expands ~ to the user's home directory
