@@ -9,7 +9,7 @@ to get those tokens in the right place.
 ## Features
 
 - OAuth device flow authentication (no manual token creation needed)
-- Support for multiple providers (GitHub, GitHub Enterprise, GitLab, and Gitea)
+- Support for multiple providers (GitHub, GitHub Enterprise, GitLab, Gitea, and Forgejo)
 - Token storage in `~/.config/nix/nix.conf`
 - Token validation and status checking
 - Automatic backup creation before modifying configuration
@@ -85,6 +85,10 @@ nix-auth login gitlab --host gitlab.company.com --client-id <your-application-id
 # Gitea (uses Personal Access Token flow)
 nix-auth login gitea
 nix-auth login gitea --host gitea.company.com
+
+# Forgejo (uses Personal Access Token flow)
+nix-auth login codeberg               # for codeberg.org
+nix-auth login forgejo --host git.company.com  # for self-hosted Forgejo (--host required)
 ```
 
 The tool will:
@@ -96,7 +100,7 @@ The tool will:
 **Note for self-hosted instances**:
 - **GitHub Enterprise**: You'll need to create an OAuth App and provide the client ID via `--client-id`
 - **GitLab self-hosted**: You'll need to create an OAuth application and provide the client ID via `--client-id`
-- **Gitea**: Uses Personal Access Token flow instead of OAuth device flow (Gitea doesn't support device flow yet)
+- **Gitea/Forgejo**: Uses Personal Access Token flow instead of OAuth device flow (these platforms don't support device flow yet)
 
 The tool will guide you through this process if the client ID is not provided. You can also set the `GITHUB_CLIENT_ID` or `GITLAB_CLIENT_ID` environment variables as an alternative to the `--client-id` flag.
 
@@ -146,7 +150,7 @@ access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxx
 
 ## Future Plans
 
-- Support for more providers (Forgejo, Bitbucket, etc.)
+- Support for more providers (Bitbucket, etc.)
 - Token expiration notifications
 - Integration with system keychains for secure storage (will require patching
     Nix)

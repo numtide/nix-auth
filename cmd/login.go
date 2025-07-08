@@ -15,12 +15,14 @@ import (
 var loginCmd = &cobra.Command{
 	Use:   "login [provider]",
 	Short: "Authenticate with a provider and save the access token",
-	Long: `Authenticate with a provider (GitHub, GitLab, Gitea, etc.) using OAuth device flow
+	Long: `Authenticate with a provider (GitHub, GitLab, Gitea, Forgejo, etc.) using OAuth device flow
 and save the access token to your nix.conf for use with Nix flakes.`,
 	Example: `  nix-auth login                      # defaults to GitHub
   nix-auth login github
   nix-auth login gitlab
   nix-auth login gitea
+  nix-auth login codeberg              # for codeberg.org
+  nix-auth login forgejo --host git.company.com  # --host required for forgejo
   nix-auth login github --host github.company.com --client-id abc123
   nix-auth login gitea --host gitea.company.com`,
 	Args: cobra.MaximumNArgs(1),
