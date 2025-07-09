@@ -14,10 +14,11 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show the status of configured access tokens",
-	Long:  `Display all configured access tokens and validate them with their respective providers.`,
-	RunE:  runStatus,
+	Use:          "status",
+	Short:        "Show the status of configured access tokens",
+	Long:         `Display all configured access tokens and validate them with their respective providers.`,
+	RunE:         runStatus,
+	SilenceUsage: true,
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {

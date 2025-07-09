@@ -27,6 +27,7 @@ Notes:
 - The --provider flag only works when specifying a host, not with provider aliases
 - For Forgejo, you must specify a host as it has no default: nix-auth login <host> --provider forgejo
 - Using both a provider alias and --provider flag will result in an error`,
+	SilenceUsage: true,
 	Example: `  # Using provider aliases
   nix-auth login                           # defaults to github
   nix-auth login github
@@ -42,8 +43,8 @@ Notes:
   # Explicit provider specification
   nix-auth login git.company.com --provider forgejo
   nix-auth login github.company.com --client-id abc123`,
-	Args:         cobra.MaximumNArgs(1),
-	RunE:         runLogin,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runLogin,
 }
 
 var (

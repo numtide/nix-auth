@@ -18,8 +18,9 @@ You can specify either a provider name (github, gitlab) or a full host.`,
 	Example: `  nix-auth logout github
   nix-auth logout github.com
   nix-auth logout gitlab.company.com`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runLogout,
+	Args:         cobra.MaximumNArgs(1),
+	RunE:         runLogout,
+	SilenceUsage: true,
 }
 
 func runLogout(cmd *cobra.Command, args []string) error {

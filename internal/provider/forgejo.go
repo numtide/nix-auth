@@ -113,7 +113,7 @@ func (f *ForgejoProvider) Authenticate(ctx context.Context) (string, error) {
 
 	tokenURL := fmt.Sprintf("%s/user/settings/applications", f.getBaseURL())
 	fmt.Printf("Opening %s in your browser...\n", tokenURL)
-	
+
 	if err := browser.OpenURL(tokenURL); err != nil {
 		fmt.Println("Could not open browser automatically.")
 		fmt.Printf("Please manually visit: %s\n", tokenURL)

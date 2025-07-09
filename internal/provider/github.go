@@ -38,10 +38,10 @@ func (g *GitHubProvider) DetectHost(ctx context.Context, client *http.Client, ho
 
 	// For other hosts, check if it's GitHub Enterprise
 	baseURL := fmt.Sprintf("https://%s", host)
-	
+
 	// GitHub Enterprise uses /api/v3
 	apiURL := fmt.Sprintf("%s/api/v3", baseURL)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return false
