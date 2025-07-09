@@ -52,12 +52,17 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		// Create a tabwriter for aligned output
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
-		// Try to determine provider from host
+		// Detect provider from host
 		var prov provider.Provider
-		for _, p := range provider.Registry {
-			if strings.Contains(host, p.Host()) {
+		providerName := ""
+
+		detectedProvider, err := provider.DetectProviderFromHost(ctx, host)
+		if err == nil {
+			if p, ok := provider.Get(detectedProvider); ok {
 				prov = p
-				break
+				providerName = detectedProvider
+				// Set the host on the provider instance
+				prov.SetHost(host)
 			}
 		}
 
@@ -71,13 +76,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 		token, err := cfg.GetToken(host)
 		if err != nil {
-			fmt.Fprintf(w, "  Provider\t%s\n", prov.Name())
+			fmt.Fprintf(w, "  Provider\t%s\n", providerName)
 			fmt.Fprintf(w, "  Status\t%s\n", fmt.Sprintf("✗ Error: %v", err))
 			w.Flush()
 			continue
 		}
 
-		fmt.Fprintf(w, "  Provider\t%s\n", prov.Name())
+		fmt.Fprintf(w, "  Provider\t%s\n", providerName)
 
 		// Validate token and get user info
 		var statusStr string
