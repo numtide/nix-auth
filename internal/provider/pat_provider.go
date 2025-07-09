@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cli/browser"
 )
@@ -15,14 +16,6 @@ type PersonalAccessTokenProvider struct {
 	host         string
 	providerName string
 	defaultHost  string
-}
-
-func (p *PersonalAccessTokenProvider) SetHost(host string) {
-	p.host = host
-}
-
-func (p *PersonalAccessTokenProvider) SetClientID(clientID string) {
-	// Personal Access Token providers don't use client IDs
 }
 
 func (p *PersonalAccessTokenProvider) Name() string {
@@ -78,6 +71,9 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 	fmt.Println("5. Copy the generated token")
 	fmt.Println()
 
+	fmt.Println("Press Enter to open your browser and continue...")
+	fmt.Scanln()
+
 	tokenURL := fmt.Sprintf("%s/user/settings/applications", p.getBaseURL())
 	fmt.Printf("Opening %s in your browser...\n", tokenURL)
 
@@ -89,6 +85,7 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 	fmt.Println()
 	var token string
 	fmt.Print("Enter your Personal Access Token: ")
+	// Don't use the context here - user input should not be subject to timeout
 	if _, err := fmt.Scanln(&token); err != nil {
 		return "", fmt.Errorf("failed to read token: %w", err)
 	}
@@ -98,22 +95,30 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 		return "", fmt.Errorf("token cannot be empty")
 	}
 
-	if err := p.ValidateToken(ctx, token); err != nil {
-		return "", fmt.Errorf("invalid token: %w", err)
+	// Use a new context with timeout only for validation
+	validateCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
+	status, err := p.ValidateToken(validateCtx, token)
+	if status != ValidationStatusValid {
+		if err != nil {
+			return "", fmt.Errorf("invalid token: %w", err)
+		}
+		return "", fmt.Errorf("invalid token")
 	}
 
 	return token, nil
 }
 
-func (p *PersonalAccessTokenProvider) ValidateToken(ctx context.Context, token string) error {
+func (p *PersonalAccessTokenProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
 	userURL := fmt.Sprintf("%s/user", p.getAPIURL())
 	resp, err := p.makeAPIRequest(ctx, token, userURL)
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %w", err)
+		return ValidationStatusInvalid, fmt.Errorf("failed to validate token: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return nil
+	return ValidationStatusValid, nil
 }
 
 func (p *PersonalAccessTokenProvider) GetUserInfo(ctx context.Context, token string) (username, fullName string, err error) {

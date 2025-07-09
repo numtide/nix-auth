@@ -75,12 +75,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Set client ID: use flag, fallback to environment variable
-	clientID := loginClientID
-	if clientID != "" {
-		prov.SetClientID(clientID)
-	}
-
 	fmt.Printf("Authenticating with %s (%s)...\n", prov.Name(), host)
 
 	// If dry-run, show what would happen and exit
@@ -89,8 +83,8 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		fmt.Printf("- Provider: %s\n", prov.Name())
 		fmt.Printf("- Host: %s\n", host)
 		fmt.Printf("- OAuth scopes: %s\n", strings.Join(prov.GetScopes(), ", "))
-		if clientID != "" {
-			fmt.Printf("- Client ID: %s\n", clientID)
+		if loginClientID != "" {
+			fmt.Printf("- Client ID: %s\n", loginClientID)
 		}
 		fmt.Printf("- Config file: %s\n", configPath)
 		fmt.Println("\nNo authentication performed. Run without --dry-run to authenticate.")
@@ -134,8 +128,15 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	// Validate token
 	fmt.Println("\nValidating token...")
-	if err := prov.ValidateToken(ctx, token); err != nil {
+	status, err := prov.ValidateToken(ctx, token)
+	if err != nil && status != provider.ValidationStatusUnknown {
 		return fmt.Errorf("token validation failed: %w", err)
+	}
+	if status == provider.ValidationStatusInvalid {
+		return fmt.Errorf("token is invalid")
+	}
+	if status == provider.ValidationStatusUnknown {
+		fmt.Println("Warning: Token cannot be verified (unknown provider)")
 	}
 
 	// Save token
@@ -152,19 +153,25 @@ func runLogin(cmd *cobra.Command, args []string) error {
 // resolveProviderAndHost determines the provider and host from the input
 func resolveProviderAndHost(input, providerFlag string, timeout int) (provider.Provider, string, error) {
 	// Check if input is a provider alias
-	if prov, ok := provider.Get(input); ok {
+	if reg, ok := provider.GetRegistration(input); ok {
 		// It's a provider alias
 		if providerFlag != "auto" && providerFlag != input {
 			return nil, "", fmt.Errorf("cannot use --provider %s with provider alias '%s'\n"+
 				"Use: nix-auth login %s", providerFlag, input, input)
 		}
 
-		host := prov.Host()
+		host := reg.DefaultHost
 		if host == "" {
 			return nil, "", fmt.Errorf("provider '%s' requires a host\n"+
 				"Use: nix-auth login <host> --provider %s", input, input)
 		}
 
+		// Create provider with config
+		cfg := provider.ProviderConfig{
+			Host:     host,
+			ClientID: loginClientID,
+		}
+		prov := reg.New(cfg)
 		return prov, host, nil
 	}
 
@@ -180,7 +187,7 @@ func resolveProviderForHost(host, providerFlag string, timeout int) (provider.Pr
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()
 
-		prov, err := provider.DetectProviderFromHost(ctx, host)
+		prov, err := provider.Detect(ctx, host, loginClientID)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to detect provider for %s: %w\n"+
 				"Try: nix-auth login %s --provider <github|gitlab|gitea|forgejo>",
@@ -192,13 +199,15 @@ func resolveProviderForHost(host, providerFlag string, timeout int) (provider.Pr
 	}
 
 	// Use explicitly specified provider
-	prov, ok := provider.Get(providerFlag)
+	cfg := provider.ProviderConfig{
+		Host:     host,
+		ClientID: loginClientID,
+	}
+	prov, ok := provider.GetWithConfig(providerFlag, cfg)
 	if !ok {
 		available := strings.Join(provider.List(), ", ")
 		return nil, "", fmt.Errorf("unknown provider '%s'. Available providers: %s", providerFlag, available)
 	}
 
-	// Set the host on the provider
-	prov.SetHost(host)
 	return prov, host, nil
 }

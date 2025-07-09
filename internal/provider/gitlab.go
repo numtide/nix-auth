@@ -11,55 +11,59 @@ import (
 )
 
 func init() {
-	Register("gitlab", &GitLabProvider{})
+	RegisterProvider("gitlab", ProviderRegistration{
+		New: func(cfg ProviderConfig) Provider {
+			return &GitLabProvider{
+				host:     cfg.Host,
+				clientID: cfg.ClientID,
+			}
+		},
+		Detect:      NewGitLabProviderForHost,
+		DefaultHost: "gitlab.com",
+	})
 }
 
-type GitLabProvider struct {
-	host     string
-	clientID string
-}
-
-// SetHost sets a custom host for the GitLab provider
-func (g *GitLabProvider) SetHost(host string) {
-	g.host = host
-}
-
-// SetClientID sets a custom OAuth client ID for the GitLab provider
-func (g *GitLabProvider) SetClientID(clientID string) {
-	g.clientID = clientID
-}
-
-// DetectHost checks if the given host is a GitLab instance
-func (g *GitLabProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
+// NewGitLabProviderForHost attempts to create a GitLab provider for the given host
+// Returns nil, nil if the host is not a GitLab instance
+// Returns nil, error if there was a network error during detection
+func NewGitLabProviderForHost(ctx context.Context, client *http.Client, host string) (Provider, error) {
 	// Known GitLab host
 	if strings.ToLower(host) == "gitlab.com" {
-		return true
+		p := &GitLabProvider{host: host}
+		return p, nil
 	}
 
 	// For other hosts, check if it's a GitLab instance using the version endpoint
 	baseURL := fmt.Sprintf("https://%s", host)
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v4/version", baseURL), nil)
 	if err != nil {
-		return false
+		return nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return false
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		var data map[string]interface{}
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return false
+			return nil, nil // Not a GitLab instance
 		}
 		// GitLab version endpoint returns version and revision
 		if _, ok := data["version"]; ok {
-			return true
+			p := &GitLabProvider{host: host}
+			return p, nil
 		}
 	}
-	return false
+
+	return nil, nil // Not a GitLab instance
+}
+
+type GitLabProvider struct {
+	host     string
+	clientID string
 }
 
 // getBaseURL returns the base URL for API calls
@@ -266,14 +270,14 @@ func (g *GitLabProvider) pollForToken(ctx context.Context, clientID string, devi
 	}
 }
 
-func (g *GitLabProvider) ValidateToken(ctx context.Context, token string) error {
+func (g *GitLabProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
 	resp, err := g.makeGitLabAPIRequest(ctx, token, fmt.Sprintf("%s/api/v4/user", g.getBaseURL()))
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %w", err)
+		return ValidationStatusInvalid, fmt.Errorf("failed to validate token: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return nil
+	return ValidationStatusValid, nil
 }
 
 func (g *GitLabProvider) GetUserInfo(ctx context.Context, token string) (username, fullName string, err error) {

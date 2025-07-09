@@ -16,11 +16,11 @@ import (
 func TestRunStatus(t *testing.T) {
 	// Save original values
 	originalConfigPath := configPath
-	originalRegistry := provider.Registry
+	originalRegistry := provider.GetRegistry()
 
 	defer func() {
 		configPath = originalConfigPath
-		provider.Registry = originalRegistry
+		provider.SetRegistry(originalRegistry)
 	}()
 
 	tests := []struct {
@@ -64,16 +64,32 @@ func TestRunStatus(t *testing.T) {
 			},
 			setupProviders: func() {
 				// Clear registry and add mock provider
-				provider.Registry = make(map[string]provider.Provider)
-				provider.Register("github", &mockStatusProvider{
-					name:     "github",
-					host:     "github.com",
-					valid:    true,
-					scopes:   []string{"repo", "read:user"},
-					username: "testuser",
-					fullName: "Test User",
+				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
+				provider.RegisterProvider("github", provider.ProviderRegistration{
+					New: func(cfg provider.ProviderConfig) provider.Provider {
+						return &mockStatusProvider{
+							name:     "github",
+							host:     cfg.Host,
+							valid:    true,
+							scopes:   []string{"repo", "read:user"},
+							username: "testuser",
+							fullName: "Test User",
+						}
+					},
+					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
+						if host == "github.com" {
+							return &mockStatusProvider{
+								name:     "github",
+								host:     host,
+								valid:    true,
+								scopes:   []string{"repo", "read:user"},
+								username: "testuser",
+								fullName: "Test User",
+							}, nil
+						}
+						return nil, nil
+					},
 				})
-
 			},
 			expectedOutput: []string{
 				"Access Tokens (1 configured",
@@ -100,23 +116,58 @@ func TestRunStatus(t *testing.T) {
 				return configFile
 			},
 			setupProviders: func() {
-				provider.Registry = make(map[string]provider.Provider)
-				provider.Register("github", &mockStatusProvider{
-					name:     "github",
-					host:     "github.com",
-					valid:    true,
-					scopes:   []string{"repo"},
-					username: "ghuser",
-					fullName: "GitHub User",
+				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
+				provider.RegisterProvider("github", provider.ProviderRegistration{
+					New: func(cfg provider.ProviderConfig) provider.Provider {
+						return &mockStatusProvider{
+							name:     "github",
+							host:     cfg.Host,
+							valid:    true,
+							scopes:   []string{"repo"},
+							username: "ghuser",
+							fullName: "GitHub User",
+						}
+					},
+					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
+						if host == "github.com" {
+							return &mockStatusProvider{
+								name:     "github",
+								host:     host,
+								valid:    true,
+								scopes:   []string{"repo"},
+								username: "ghuser",
+								fullName: "GitHub User",
+							}, nil
+						}
+						return nil, nil
+					},
 				})
-				provider.Register("gitlab", &mockStatusProvider{
-					name:       "gitlab",
-					host:       "gitlab.com",
-					valid:      false,
-					validError: fmt.Errorf("401 Unauthorized"),
-					scopes:     []string{},
-					username:   "",
-					fullName:   "",
+				provider.RegisterProvider("gitlab", provider.ProviderRegistration{
+					New: func(cfg provider.ProviderConfig) provider.Provider {
+						return &mockStatusProvider{
+							name:       "gitlab",
+							host:       cfg.Host,
+							valid:      false,
+							validError: fmt.Errorf("401 Unauthorized"),
+							scopes:     []string{},
+							username:   "",
+							fullName:   "",
+						}
+					},
+					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
+						if host == "gitlab.com" {
+							return &mockStatusProvider{
+								name:       "gitlab",
+								host:       host,
+								valid:      false,
+								validError: fmt.Errorf("401 Unauthorized"),
+								scopes:     []string{},
+								username:   "",
+								fullName:   "",
+							}, nil
+						}
+						return nil, nil
+					},
 				})
 			},
 			expectedOutput: []string{
@@ -138,7 +189,7 @@ func TestRunStatus(t *testing.T) {
 			setupConfig: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = unknown.host.com=token123
+				content := `access-tokens = unknown.host.com=token1234567890
 `
 				err := os.WriteFile(configFile, []byte(content), 0644)
 				if err != nil {
@@ -147,13 +198,15 @@ func TestRunStatus(t *testing.T) {
 				return configFile
 			},
 			setupProviders: func() {
-				provider.Registry = make(map[string]provider.Provider)
+				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
+				// No need to register unknown provider - it's handled internally
 			},
 			expectedOutput: []string{
 				"unknown.host.com",
 				"Provider  unknown",
-				"Status    ✗ Unknown provider",
-				"Token     Configured (validation not available)",
+				"Status    ⚠ Unknown (unverified)",
+				"Token     toke****7890",
+				"Scopes    None",
 			},
 			expectError: false,
 		},
@@ -211,24 +264,18 @@ type mockStatusProvider struct {
 	fullName   string
 }
 
-func (m *mockStatusProvider) Name() string                { return m.name }
-func (m *mockStatusProvider) Host() string                { return m.host }
-func (m *mockStatusProvider) SetHost(host string)         { m.host = host }
-func (m *mockStatusProvider) SetClientID(clientID string) { m.clientID = clientID }
-
-func (m *mockStatusProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
-	return host == m.host
-}
+func (m *mockStatusProvider) Name() string { return m.name }
+func (m *mockStatusProvider) Host() string { return m.host }
 
 func (m *mockStatusProvider) Authenticate(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("not implemented")
 }
 
-func (m *mockStatusProvider) ValidateToken(ctx context.Context, token string) error {
+func (m *mockStatusProvider) ValidateToken(ctx context.Context, token string) (provider.ValidationStatus, error) {
 	if m.valid {
-		return nil
+		return provider.ValidationStatusValid, nil
 	}
-	return m.validError
+	return provider.ValidationStatusInvalid, m.validError
 }
 
 func (m *mockStatusProvider) GetScopes() []string {
@@ -247,6 +294,36 @@ func (m *mockStatusProvider) GetUserInfo(ctx context.Context, token string) (str
 		return "", "", fmt.Errorf("invalid token")
 	}
 	return m.username, m.fullName, nil
+}
+
+// mockUnknownProvider implements Provider interface for unknown hosts
+type mockUnknownProvider struct {
+	host string
+}
+
+func (m *mockUnknownProvider) Name() string { return "unknown" }
+func (m *mockUnknownProvider) Host() string { return m.host }
+
+func (m *mockUnknownProvider) Authenticate(ctx context.Context) (string, error) {
+	return "", fmt.Errorf("authentication not supported for unknown provider")
+}
+
+func (m *mockUnknownProvider) ValidateToken(ctx context.Context, token string) (provider.ValidationStatus, error) {
+	// Unknown providers cannot validate tokens
+	return provider.ValidationStatusUnknown, nil
+}
+
+func (m *mockUnknownProvider) GetScopes() []string {
+	return []string{}
+}
+
+func (m *mockUnknownProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
+	// Return empty scopes for unknown providers
+	return []string{}, nil
+}
+
+func (m *mockUnknownProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
+	return "", "", fmt.Errorf("user info not available for unknown provider")
 }
 
 func TestStatusCommandIntegration(t *testing.T) {

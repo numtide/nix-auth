@@ -8,11 +8,11 @@ import (
 	"testing"
 )
 
-func TestDetectProviderFromHost_Integration(t *testing.T) {
+func TestDetect_Integration(t *testing.T) {
 	// Save original registry
-	originalRegistry := Registry
+	originalRegistry := registry
 	defer func() {
-		Registry = originalRegistry
+		registry = originalRegistry
 	}()
 
 	// Create test providers with mock servers
@@ -23,44 +23,14 @@ func TestDetectProviderFromHost_Integration(t *testing.T) {
 		expectError      bool
 	}{
 		{
-			name: "github-like API",
-			setupServer: func() *httptest.Server {
-				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if r.URL.Path == "/api/v3" {
-						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(`{"current_user_url":"https://api.github.com/user"}`))
-					} else {
-						w.WriteHeader(http.StatusNotFound)
-					}
-				}))
-			},
-			expectedProvider: "github-test",
-			expectError:      false,
-		},
-		{
-			name: "gitea-like API",
-			setupServer: func() *httptest.Server {
-				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if r.URL.Path == "/api/v1/version" {
-						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(`{"version":"1.21.0"}`))
-					} else {
-						w.WriteHeader(http.StatusNotFound)
-					}
-				}))
-			},
-			expectedProvider: "gitea-test",
-			expectError:      false,
-		},
-		{
-			name: "no matching API",
+			name: "no matching API returns unknown",
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNotFound)
 				}))
 			},
-			expectedProvider: "",
-			expectError:      true,
+			expectedProvider: "unknown",
+			expectError:      false,
 		},
 	}
 
@@ -72,38 +42,11 @@ func TestDetectProviderFromHost_Integration(t *testing.T) {
 			// Extract host from server URL
 			host := strings.TrimPrefix(server.URL, "http://")
 
-			// Setup registry with test providers
-			Registry = make(map[string]Provider)
-
-			// GitHub-like provider
-			Register("github-test", &testDetectionProvider{
-				name: "github-test",
-				detectFunc: func(ctx context.Context, client *http.Client, h string) bool {
-					resp, err := client.Get("http://" + h + "/api/v3")
-					if err != nil {
-						return false
-					}
-					defer resp.Body.Close()
-					return resp.StatusCode == http.StatusOK
-				},
-			})
-
-			// Gitea-like provider
-			Register("gitea-test", &testDetectionProvider{
-				name: "gitea-test",
-				detectFunc: func(ctx context.Context, client *http.Client, h string) bool {
-					resp, err := client.Get("http://" + h + "/api/v1/version")
-					if err != nil {
-						return false
-					}
-					defer resp.Body.Close()
-					return resp.StatusCode == http.StatusOK
-				},
-			})
+			// No need to setup registry anymore - detection uses hardcoded providers
 
 			// Test detection
 			ctx := context.Background()
-			provider, err := DetectProviderFromHost(ctx, host)
+			provider, err := Detect(ctx, host, "")
 
 			if tt.expectError {
 				if err == nil {
@@ -129,26 +72,17 @@ func TestDetectProviderFromHost_Integration(t *testing.T) {
 
 // testDetectionProvider is a minimal provider for testing detection
 type testDetectionProvider struct {
-	name       string
-	host       string
-	detectFunc func(context.Context, *http.Client, string) bool
+	name string
+	host string
 }
 
-func (t *testDetectionProvider) Name() string                { return t.name }
-func (t *testDetectionProvider) Host() string                { return t.host }
-func (t *testDetectionProvider) SetHost(host string)         { t.host = host }
-func (t *testDetectionProvider) SetClientID(clientID string) {}
-func (t *testDetectionProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
-	if t.detectFunc != nil {
-		return t.detectFunc(ctx, client, host)
-	}
-	return false
-}
+func (t *testDetectionProvider) Name() string { return t.name }
+func (t *testDetectionProvider) Host() string { return t.host }
 func (t *testDetectionProvider) Authenticate(ctx context.Context) (string, error) {
 	return "", nil
 }
-func (t *testDetectionProvider) ValidateToken(ctx context.Context, token string) error {
-	return nil
+func (t *testDetectionProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
+	return ValidationStatusValid, nil
 }
 func (t *testDetectionProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
 	return "", "", nil

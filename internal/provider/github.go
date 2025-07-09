@@ -11,60 +11,62 @@ import (
 )
 
 func init() {
-	Register("github", &GitHubProvider{})
+	RegisterProvider("github", ProviderRegistration{
+		New: func(cfg ProviderConfig) Provider {
+			return &GitHubProvider{
+				host:     cfg.Host,
+				clientID: cfg.ClientID,
+			}
+		},
+		Detect:      NewGitHubProviderForHost,
+		DefaultHost: "github.com",
+	})
 }
 
-type GitHubProvider struct {
-	host     string
-	clientID string
-}
-
-// SetHost sets a custom host for the GitHub provider
-func (g *GitHubProvider) SetHost(host string) {
-	g.host = host
-}
-
-// SetClientID sets a custom OAuth client ID for the GitHub provider
-func (g *GitHubProvider) SetClientID(clientID string) {
-	g.clientID = clientID
-}
-
-// DetectHost checks if the given host is a GitHub instance
-func (g *GitHubProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
+// NewGitHubProviderForHost attempts to create a GitHub provider for the given host
+// Returns nil, nil if the host is not a GitHub instance
+// Returns nil, error if there was a network error during detection
+func NewGitHubProviderForHost(ctx context.Context, client *http.Client, host string) (Provider, error) {
 	// Known GitHub hosts
 	if strings.ToLower(host) == "github.com" {
-		return true
+		p := &GitHubProvider{host: host}
+		return p, nil
 	}
 
 	// For other hosts, check if it's GitHub Enterprise
 	baseURL := fmt.Sprintf("https://%s", host)
-
-	// GitHub Enterprise uses /api/v3
 	apiURL := fmt.Sprintf("%s/api/v3", baseURL)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
-		return false
+		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return false
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		var data map[string]interface{}
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return false
+			return nil, nil // Not a GitHub instance
 		}
 		// GitHub API response includes current_user_url
 		if _, ok := data["current_user_url"]; ok {
-			return true
+			p := &GitHubProvider{host: host}
+			return p, nil
 		}
 	}
-	return false
+
+	return nil, nil // Not a GitHub instance
+}
+
+type GitHubProvider struct {
+	host     string
+	clientID string
 }
 
 // getBaseURL returns the base URL for web URLs
@@ -158,15 +160,15 @@ func (g *GitHubProvider) Authenticate(ctx context.Context) (string, error) {
 	return accessToken.Token, nil
 }
 
-func (g *GitHubProvider) ValidateToken(ctx context.Context, token string) error {
+func (g *GitHubProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
 	userURL := fmt.Sprintf("%s/user", g.getAPIURL())
 	resp, err := g.makeGitHubAPIRequest(ctx, token, userURL)
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %w", err)
+		return ValidationStatusInvalid, fmt.Errorf("failed to validate token: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return nil
+	return ValidationStatusValid, nil
 }
 
 func (g *GitHubProvider) GetUserInfo(ctx context.Context, token string) (username, fullName string, err error) {

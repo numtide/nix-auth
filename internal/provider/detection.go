@@ -2,28 +2,44 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 )
 
-// DetectProviderFromHost attempts to identify the provider type by querying various API endpoints
-func DetectProviderFromHost(ctx context.Context, host string) (Provider, error) {
+// Detect attempts to identify the provider type by querying various API endpoints
+func Detect(ctx context.Context, host, clientID string) (Provider, error) {
 	// Create a client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// Try each registered provider
-	for _, provider := range Registry {
-		// Create a new instance to avoid mutating the registered provider
-		p := provider
-		if p.DetectHost(ctx, client, host) {
-			// Set the host on the provider instance before returning
-			p.SetHost(host)
-			return p, nil
+	// Try each registered provider in preferred order
+	for _, name := range ListForDetection() {
+		reg, ok := registry[name]
+		if !ok || reg.Detect == nil {
+			continue
 		}
+
+		provider, err := reg.Detect(ctx, client, host)
+		if err != nil {
+			// Network error - return unknown provider with the host set
+			return NewUnknownProvider(host), nil
+		}
+		if provider != nil {
+			// Found a matching provider
+			// If clientID is provided, recreate with proper config
+			if clientID != "" {
+				cfg := ProviderConfig{
+					Host:     host,
+					ClientID: clientID,
+				}
+				return reg.New(cfg), nil
+			}
+			return provider, nil
+		}
+		// provider is nil - this detector doesn't match, try the next one
 	}
 
-	return nil, fmt.Errorf("unable to detect provider type for host: %s", host)
+	// If no specific provider matched, use the unknown provider
+	return NewUnknownProvider(host), nil
 }

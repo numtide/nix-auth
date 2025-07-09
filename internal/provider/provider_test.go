@@ -3,19 +3,18 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"testing"
 )
 
 func TestRegistry(t *testing.T) {
 	// Save original registry
-	originalRegistry := Registry
+	originalRegistry := registry
 	defer func() {
-		Registry = originalRegistry
+		registry = originalRegistry
 	}()
 
 	// Test with empty registry
-	Registry = make(map[string]Provider)
+	registry = make(map[string]*ProviderRegistration)
 
 	// Test Get with non-existent provider
 	_, exists := Get("nonexistent")
@@ -23,17 +22,30 @@ func TestRegistry(t *testing.T) {
 		t.Errorf("expected Get to return false for non-existent provider")
 	}
 
-	// Test Register
-	mockProvider := &mockProvider{name: "mock", host: "mock.example.com"}
-	Register("mock", mockProvider)
+	// Test RegisterProvider
+	RegisterProvider("mock", ProviderRegistration{
+		New: func(cfg ProviderConfig) Provider {
+			return &mockProvider{
+				name:     "mock",
+				host:     cfg.Host,
+				clientID: cfg.ClientID,
+			}
+		},
+		Detect:      nil,
+		DefaultHost: "mock.example.com",
+	})
 
 	// Test Get with existing provider
 	p, exists := Get("mock")
 	if !exists {
 		t.Errorf("expected Get to return true for registered provider")
 	}
-	if p != mockProvider {
-		t.Errorf("expected Get to return the registered provider")
+	// Verify the provider has correct name and default host
+	if p.Name() != "mock" {
+		t.Errorf("expected provider name to be 'mock', got %q", p.Name())
+	}
+	if p.Host() != "mock.example.com" {
+		t.Errorf("expected provider host to be 'mock.example.com', got %q", p.Host())
 	}
 
 	// Test List
@@ -62,21 +74,16 @@ type mockProvider struct {
 	clientID string
 }
 
-func (m *mockProvider) Name() string                { return m.name }
-func (m *mockProvider) Host() string                { return m.host }
-func (m *mockProvider) SetHost(host string)         { m.host = host }
-func (m *mockProvider) SetClientID(clientID string) { m.clientID = clientID }
-func (m *mockProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
-	return host == m.host
-}
+func (m *mockProvider) Name() string { return m.name }
+func (m *mockProvider) Host() string { return m.host }
 func (m *mockProvider) Authenticate(ctx context.Context) (string, error) {
 	return "mock-token", nil
 }
-func (m *mockProvider) ValidateToken(ctx context.Context, token string) error {
+func (m *mockProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
 	if token == "invalid" {
-		return fmt.Errorf("invalid token")
+		return ValidationStatusInvalid, fmt.Errorf("invalid token")
 	}
-	return nil
+	return ValidationStatusValid, nil
 }
 func (m *mockProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
 	return "mockuser", "Mock User", nil
@@ -88,11 +95,11 @@ func (m *mockProvider) GetTokenScopes(ctx context.Context, token string) ([]stri
 	return []string{"read", "write"}, nil
 }
 
-func TestDetectProviderFromHost(t *testing.T) {
+func TestDetect(t *testing.T) {
 	// Save original registry
-	originalRegistry := Registry
+	originalRegistry := registry
 	defer func() {
-		Registry = originalRegistry
+		registry = originalRegistry
 	}()
 
 	tests := []struct {
@@ -103,35 +110,41 @@ func TestDetectProviderFromHost(t *testing.T) {
 		expectError      bool
 	}{
 		{
-			name: "detect registered provider",
-			host: "test.example.com",
+			name: "detect github.com",
+			host: "github.com",
 			setupProviders: func() {
-				Registry = make(map[string]Provider)
-				mockP := &mockProvider{name: "test", host: "test.example.com"}
-				Register("test", mockP)
+				// No setup needed - detection uses hardcoded providers
 			},
-			expectedProvider: "test",
+			expectedProvider: "github",
 			expectError:      false,
 		},
 		{
-			name: "no matching provider",
+			name: "no matching provider returns unknown",
 			host: "unknown.example.com",
 			setupProviders: func() {
-				Registry = make(map[string]Provider)
-				mockP := &mockProvider{name: "test", host: "test.example.com"}
-				Register("test", mockP)
+				registry = make(map[string]*ProviderRegistration)
+				RegisterProvider("test", ProviderRegistration{
+					New: func(cfg ProviderConfig) Provider {
+						return &mockProvider{
+							name: "test",
+							host: cfg.Host,
+						}
+					},
+					Detect:      nil,
+					DefaultHost: "test.example.com",
+				})
 			},
-			expectedProvider: "",
-			expectError:      true,
+			expectedProvider: "unknown",
+			expectError:      false,
 		},
 		{
-			name: "empty registry",
+			name: "empty registry returns unknown",
 			host: "any.example.com",
 			setupProviders: func() {
-				Registry = make(map[string]Provider)
+				registry = make(map[string]*ProviderRegistration)
 			},
-			expectedProvider: "",
-			expectError:      true,
+			expectedProvider: "unknown",
+			expectError:      false,
 		},
 	}
 
@@ -140,7 +153,7 @@ func TestDetectProviderFromHost(t *testing.T) {
 			tt.setupProviders()
 
 			ctx := context.Background()
-			provider, err := DetectProviderFromHost(ctx, tt.host)
+			provider, err := Detect(ctx, tt.host, "")
 
 			if tt.expectError {
 				if err == nil {

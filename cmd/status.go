@@ -54,13 +54,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 		// Detect provider from host
-		prov, err := provider.DetectProviderFromHost(ctx, host)
+		prov, err := provider.Detect(ctx, host, "")
 		if err != nil {
-			fmt.Fprintf(w, "  Provider\t%s\n", "unknown")
-			fmt.Fprintf(w, "  Status\t%s\n", "✗ Unknown provider")
-			fmt.Fprintf(w, "  Token\t%s\n", "Configured (validation not available)")
-			w.Flush()
-			continue
+			// This should never happen as Detect always returns a provider
+			// If we reach this, it's a programming error
+			panic(fmt.Sprintf("impossible: Detect returned error for host %s: %v", host, err))
 		}
 
 		providerName := prov.Name()
@@ -77,12 +75,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 		// Validate token and get user info
 		var statusStr string
-		validationErr := prov.ValidateToken(ctx, token)
-		if validationErr != nil {
-			statusStr = fmt.Sprintf("✗ Invalid - %v", validationErr)
-		} else {
+		validationStatus, validationErr := prov.ValidateToken(ctx, token)
+		
+		switch validationStatus {
+		case provider.ValidationStatusValid:
 			statusStr = "✓ Valid"
-
 			// Get user info if valid
 			username, fullName, err := prov.GetUserInfo(ctx, token)
 			if err == nil {
@@ -92,6 +89,14 @@ func runStatus(cmd *cobra.Command, args []string) error {
 					fmt.Fprintf(w, "  User\t%s\n", username)
 				}
 			}
+		case provider.ValidationStatusInvalid:
+			if validationErr != nil {
+				statusStr = fmt.Sprintf("✗ Invalid - %v", validationErr)
+			} else {
+				statusStr = "✗ Invalid"
+			}
+		case provider.ValidationStatusUnknown:
+			statusStr = "⚠ Unknown (unverified)"
 		}
 
 		// Mask token for security

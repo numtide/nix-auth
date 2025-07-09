@@ -2,63 +2,58 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 )
 
 func init() {
-	Register("forgejo", &ForgejoProvider{
-		PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-			providerName: "forgejo",
-			defaultHost:  "", // No default host for Forgejo
+	RegisterProvider("forgejo", ProviderRegistration{
+		New: func(cfg ProviderConfig) Provider {
+			return &ForgejoProvider{
+				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
+					providerName: "forgejo",
+					defaultHost:  "", // No default host for Forgejo
+					host:         cfg.Host,
+				},
+			}
 		},
+		Detect:      NewForgejoProviderForHost,
+		DefaultHost: "", // No default host for Forgejo
 	})
-	Register("codeberg", &ForgejoProvider{
-		PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-			providerName: "forgejo",
-			defaultHost:  "codeberg.org",
-			host:         "codeberg.org",
+
+	// Codeberg is just an alias with a specific host
+	RegisterProvider("codeberg", ProviderRegistration{
+		New: func(cfg ProviderConfig) Provider {
+			return &ForgejoProvider{
+				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
+					providerName: "forgejo",
+					defaultHost:  "codeberg.org",
+					host:         cfg.Host,
+				},
+			}
 		},
+		// No detector for codeberg alias
+		Detect:      nil,
+		DefaultHost: "codeberg.org",
 	})
+}
+
+// NewForgejoProviderForHost attempts to create a Forgejo provider for the given host
+// Returns nil, nil if the host is not a Forgejo instance
+// Returns nil, error if there was a network error during detection
+func NewForgejoProviderForHost(ctx context.Context, client *http.Client, host string) (Provider, error) {
+	provider, err := detectGiteaOrForgejo(ctx, client, host)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Check if it's actually a Forgejo provider
+	if provider != nil && provider.Name() == "forgejo" {
+		return provider, nil
+	}
+	
+	return nil, nil // Not a Forgejo instance
 }
 
 type ForgejoProvider struct {
 	PersonalAccessTokenProvider
-}
-
-// DetectHost checks if the given host is a Forgejo instance
-func (f *ForgejoProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
-	// Known Forgejo/Codeberg host
-	if strings.ToLower(host) == "codeberg.org" {
-		return true
-	}
-
-	// For other hosts, check if it's a Forgejo instance using the version endpoint
-	baseURL := fmt.Sprintf("https://%s", host)
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/version", baseURL), nil)
-	if err != nil {
-		return false
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		var data struct {
-			Version string `json:"version"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return false
-		}
-		// Forgejo includes "forgejo" in the version string
-		if strings.Contains(strings.ToLower(data.Version), "forgejo") {
-			return true
-		}
-	}
-	return false
 }
