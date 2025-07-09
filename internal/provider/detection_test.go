@@ -113,8 +113,14 @@ func TestDetectProviderFromHost_Integration(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
-				if provider != tt.expectedProvider {
-					t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider)
+				if provider == nil {
+					t.Errorf("expected provider but got nil")
+				} else if provider.Name() != tt.expectedProvider {
+					t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider.Name())
+				}
+				// Verify host was set
+				if provider != nil && provider.Host() != host {
+					t.Errorf("expected host %q, got %q", host, provider.Host())
 				}
 			}
 		})
@@ -153,4 +159,3 @@ func (t *testDetectionProvider) GetScopes() []string {
 func (t *testDetectionProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
 	return nil, nil
 }
-

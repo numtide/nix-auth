@@ -263,4 +263,3 @@ func TestStatusCommandIntegration(t *testing.T) {
 		t.Error("statusCmd.RunE should not be nil")
 	}
 }
-

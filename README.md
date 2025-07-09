@@ -93,7 +93,7 @@ The tool will:
 - **GitLab self-hosted**: You'll need to create an OAuth application and provide the client ID via `--client-id`
 - **Gitea/Forgejo**: Uses Personal Access Token flow instead of OAuth device flow (these platforms don't support device flow yet)
 
-The tool will guide you through this process if the client ID is not provided. You can also set the `GITHUB_CLIENT_ID` or `GITLAB_CLIENT_ID` environment variables as an alternative to the `--client-id` flag.
+The tool will guide you through this process if the client ID is not provided.
 
 ### Check Status
 

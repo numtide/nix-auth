@@ -126,10 +126,8 @@ func (g *GitHubProvider) Authenticate(ctx context.Context) (string, error) {
 			fmt.Println("3. After creating, copy the Client ID")
 			fmt.Println("\nThen run:")
 			fmt.Printf("  nix-auth login github --host %s --client-id <your-client-id>\n", g.host)
-			fmt.Println("\nOr set the GITHUB_CLIENT_ID environment variable:")
-			fmt.Println("  export GITHUB_CLIENT_ID=<your-client-id>")
 			fmt.Printf("  nix-auth login github --host %s\n", g.host)
-			return "", fmt.Errorf("client ID required for GitHub Enterprise (use --client-id flag or GITHUB_CLIENT_ID env var)")
+			return "", fmt.Errorf("client ID required for GitHub Enterprise (use --client-id flag)")
 		}
 	}
 

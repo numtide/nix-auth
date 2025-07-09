@@ -9,6 +9,7 @@ import (
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
+	"github.com/numtide/nix-auth/internal/util"
 
 	"github.com/spf13/cobra"
 )
@@ -53,26 +54,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 		// Detect provider from host
-		var prov provider.Provider
-		providerName := ""
-
-		detectedProvider, err := provider.DetectProviderFromHost(ctx, host)
-		if err == nil {
-			if p, ok := provider.Get(detectedProvider); ok {
-				prov = p
-				providerName = detectedProvider
-				// Set the host on the provider instance
-				prov.SetHost(host)
-			}
-		}
-
-		if prov == nil {
+		prov, err := provider.DetectProviderFromHost(ctx, host)
+		if err != nil {
 			fmt.Fprintf(w, "  Provider\t%s\n", "unknown")
 			fmt.Fprintf(w, "  Status\t%s\n", "✗ Unknown provider")
 			fmt.Fprintf(w, "  Token\t%s\n", "Configured (validation not available)")
 			w.Flush()
 			continue
 		}
+
+		providerName := prov.Name()
 
 		token, err := cfg.GetToken(host)
 		if err != nil {
@@ -104,12 +95,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		}
 
 		// Mask token for security
-		var maskedToken string
-		if len(token) > 10 {
-			maskedToken = fmt.Sprintf("%s****%s", token[:4], token[len(token)-4:])
-		} else {
-			maskedToken = "Configured"
-		}
+		maskedToken := util.MaskToken(token)
 		fmt.Fprintf(w, "  Token\t%s\n", maskedToken)
 
 		// Show token scopes

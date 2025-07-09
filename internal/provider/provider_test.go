@@ -146,15 +146,23 @@ func TestDetectProviderFromHost(t *testing.T) {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
+				if provider != nil {
+					t.Errorf("expected nil provider on error, got %v", provider)
+				}
 			} else {
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
-				if provider != tt.expectedProvider {
-					t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider)
+				if provider == nil {
+					t.Errorf("expected provider but got nil")
+				} else if provider.Name() != tt.expectedProvider {
+					t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider.Name())
+				}
+				// Verify host was set
+				if provider != nil && provider.Host() != tt.host {
+					t.Errorf("expected host %q, got %q", tt.host, provider.Host())
 				}
 			}
 		})
 	}
 }
-

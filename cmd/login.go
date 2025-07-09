@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -64,86 +63,20 @@ func init() {
 }
 
 func runLogin(cmd *cobra.Command, args []string) error {
-	var host string
-	var providerName string
-	var prov provider.Provider
-
 	// Parse the input
 	input := "github" // default
 	if len(args) > 0 {
 		input = strings.ToLower(args[0])
 	}
 
-	// First, determine if we're dealing with a host or provider alias
-	isProviderAlias := false
-	if _, ok := provider.Get(input); ok {
-		isProviderAlias = true
-		// Check for conflicts
-		if loginProvider != "auto" && loginProvider != input {
-			return fmt.Errorf("cannot use --provider %s with provider alias '%s'\n"+
-				"Use: nix-auth login %s", loginProvider, input, input)
-		}
-	}
-
-	if isProviderAlias {
-		// Handle provider alias
-		prov, _ = provider.Get(input)
-		providerName = input
-		host = prov.Host()
-
-		// For providers without a default host, require explicit host
-		if host == "" {
-			return fmt.Errorf("provider '%s' requires a host\n"+
-				"Use: nix-auth login <host> --provider %s", input, input)
-		}
-	} else {
-		// It's a host
-		host = input
-
-		// Determine the provider
-		if loginProvider == "auto" {
-			// Auto-detect provider type
-			fmt.Printf("Detecting provider type for %s by querying API...\n", host)
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(loginTimeout)*time.Second)
-			defer cancel()
-
-			detectedProvider, err := provider.DetectProviderFromHost(ctx, host)
-			if err != nil {
-				return fmt.Errorf("failed to detect provider for %s: %w\n"+
-					"Try: nix-auth login %s --provider <github|gitlab|gitea|forgejo>",
-					host, err, host)
-			}
-
-			providerName = detectedProvider
-			fmt.Printf("Detected: %s\n\n", providerName)
-		} else {
-			// Use explicitly specified provider
-			providerName = loginProvider
-		}
-
-		// Get the provider instance
-		var ok bool
-		prov, ok = provider.Get(providerName)
-		if !ok {
-			available := strings.Join(provider.List(), ", ")
-			return fmt.Errorf("unknown provider '%s'. Available providers: %s", providerName, available)
-		}
-
-		// Set the host on the provider
-		prov.SetHost(host)
+	// Resolve provider and host
+	prov, host, err := resolveProviderAndHost(input, loginProvider, loginTimeout)
+	if err != nil {
+		return err
 	}
 
 	// Set client ID: use flag, fallback to environment variable
 	clientID := loginClientID
-	if clientID == "" {
-		// Check provider-specific environment variable
-		switch providerName {
-		case "github":
-			clientID = os.Getenv("GITHUB_CLIENT_ID")
-		case "gitlab":
-			clientID = os.Getenv("GITLAB_CLIENT_ID")
-		}
-	}
 	if clientID != "" {
 		prov.SetClientID(clientID)
 	}
@@ -214,4 +147,58 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Token saved to: %s\n", cfg.GetPath())
 
 	return nil
+}
+
+// resolveProviderAndHost determines the provider and host from the input
+func resolveProviderAndHost(input, providerFlag string, timeout int) (provider.Provider, string, error) {
+	// Check if input is a provider alias
+	if prov, ok := provider.Get(input); ok {
+		// It's a provider alias
+		if providerFlag != "auto" && providerFlag != input {
+			return nil, "", fmt.Errorf("cannot use --provider %s with provider alias '%s'\n"+
+				"Use: nix-auth login %s", providerFlag, input, input)
+		}
+
+		host := prov.Host()
+		if host == "" {
+			return nil, "", fmt.Errorf("provider '%s' requires a host\n"+
+				"Use: nix-auth login <host> --provider %s", input, input)
+		}
+
+		return prov, host, nil
+	}
+
+	// Input is a host
+	return resolveProviderForHost(input, providerFlag, timeout)
+}
+
+// resolveProviderForHost handles the case where input is a host
+func resolveProviderForHost(host, providerFlag string, timeout int) (provider.Provider, string, error) {
+	if providerFlag == "auto" {
+		// Auto-detect provider type
+		fmt.Printf("Detecting provider type for %s by querying API...\n", host)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		prov, err := provider.DetectProviderFromHost(ctx, host)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to detect provider for %s: %w\n"+
+				"Try: nix-auth login %s --provider <github|gitlab|gitea|forgejo>",
+				host, err, host)
+		}
+
+		fmt.Printf("Detected: %s\n\n", prov.Name())
+		return prov, host, nil
+	}
+
+	// Use explicitly specified provider
+	prov, ok := provider.Get(providerFlag)
+	if !ok {
+		available := strings.Join(provider.List(), ", ")
+		return nil, "", fmt.Errorf("unknown provider '%s'. Available providers: %s", providerFlag, available)
+	}
+
+	// Set the host on the provider
+	prov.SetHost(host)
+	return prov, host, nil
 }
