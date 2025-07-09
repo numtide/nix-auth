@@ -29,6 +29,39 @@ func (g *GitLabProvider) SetClientID(clientID string) {
 	g.clientID = clientID
 }
 
+// DetectHost checks if the given host is a GitLab instance
+func (g *GitLabProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
+	// Known GitLab host
+	if strings.ToLower(host) == "gitlab.com" {
+		return true
+	}
+
+	// For other hosts, check if it's a GitLab instance using the version endpoint
+	baseURL := fmt.Sprintf("https://%s", host)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v4/version", baseURL), nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var data map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return false
+		}
+		// GitLab version endpoint returns version and revision
+		if _, ok := data["version"]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // getBaseURL returns the base URL for API calls
 func (g *GitLabProvider) getBaseURL() string {
 	if g.host != "" && g.host != "gitlab.com" {

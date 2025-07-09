@@ -29,6 +29,44 @@ func (g *GitHubProvider) SetClientID(clientID string) {
 	g.clientID = clientID
 }
 
+// DetectHost checks if the given host is a GitHub instance
+func (g *GitHubProvider) DetectHost(ctx context.Context, client *http.Client, host string) bool {
+	// Known GitHub hosts
+	if strings.ToLower(host) == "github.com" {
+		return true
+	}
+
+	// For other hosts, check if it's GitHub Enterprise
+	baseURL := fmt.Sprintf("https://%s", host)
+	
+	// GitHub Enterprise uses /api/v3
+	apiURL := fmt.Sprintf("%s/api/v3", baseURL)
+	
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var data map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return false
+		}
+		// GitHub API response includes current_user_url
+		if _, ok := data["current_user_url"]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // getBaseURL returns the base URL for web URLs
 func (g *GitHubProvider) getBaseURL() string {
 	if g.host != "" && g.host != "github.com" {

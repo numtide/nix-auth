@@ -8,7 +8,7 @@ to get those tokens in the right place.
 
 ## Features
 
-- OAuth device flow authentication (no manual token creation needed)
+- OAuth device flow authentication when possible (no manual token creation needed)
 - Support for multiple providers (GitHub, GitHub Enterprise, GitLab, Gitea, and Forgejo)
 - Token storage in `~/.config/nix/nix.conf`
 - Token validation and status checking
@@ -61,34 +61,25 @@ go build .
 
 ### Login
 
-Authenticate with GitHub (default provider):
+Authenticate with a provider:
 
 ```bash
-nix-auth login
-```
-
-Authenticate with GitLab:
-
-```bash
+# Using provider aliases
+nix-auth login                        # defaults to github
+nix-auth login github
 nix-auth login gitlab
-```
-
-Authenticate with GitHub Enterprise or GitLab self-hosted:
-
-```bash
-# GitHub Enterprise
-nix-auth login github --host github.company.com --client-id <your-client-id>
-
-# GitLab self-hosted
-nix-auth login gitlab --host gitlab.company.com --client-id <your-application-id>
-
-# Gitea (uses Personal Access Token flow)
 nix-auth login gitea
-nix-auth login gitea --host gitea.company.com
+nix-auth login codeberg
 
-# Forgejo (uses Personal Access Token flow)
-nix-auth login codeberg               # for codeberg.org
-nix-auth login forgejo --host git.company.com  # for self-hosted Forgejo (--host required)
+# Using hosts with auto-detection
+nix-auth login github.com
+nix-auth login gitlab.company.com     # auto-detects provider type
+nix-auth login gitea.company.com      # auto-detects provider type
+
+# Explicit provider specification
+nix-auth login git.company.com --provider forgejo
+nix-auth login github.company.com --provider github --client-id <your-client-id>
+nix-auth login gitlab.company.com --provider gitlab --client-id <your-application-id>
 ```
 
 The tool will:

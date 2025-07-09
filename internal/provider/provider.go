@@ -1,6 +1,9 @@
 package provider
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 // Provider defines the interface for authentication providers
 type Provider interface {
@@ -15,6 +18,10 @@ type Provider interface {
 
 	// SetClientID sets a custom OAuth client ID for this provider
 	SetClientID(clientID string)
+
+	// DetectHost checks if this provider can handle the given host
+	// Returns true if the provider recognizes and can authenticate with the host
+	DetectHost(ctx context.Context, client *http.Client, host string) bool
 
 	// Authenticate performs the OAuth flow and returns an access token
 	Authenticate(ctx context.Context) (string, error)
