@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
@@ -50,7 +49,6 @@ var (
 	loginProvider string
 	loginClientID string
 	loginForce    bool
-	loginTimeout  int
 	loginDryRun   bool
 )
 
@@ -58,7 +56,6 @@ func init() {
 	loginCmd.Flags().StringVar(&loginProvider, "provider", "auto", "Provider type when using a host (auto, github, gitlab, gitea, forgejo, codeberg)")
 	loginCmd.Flags().StringVar(&loginClientID, "client-id", "", "OAuth client ID (required for GitHub Enterprise, optional for others)")
 	loginCmd.Flags().BoolVar(&loginForce, "force", false, "Skip confirmation prompt when replacing existing tokens")
-	loginCmd.Flags().IntVar(&loginTimeout, "timeout", 30, "Timeout in seconds for network operations")
 	loginCmd.Flags().BoolVar(&loginDryRun, "dry-run", false, "Preview what would happen without authenticating")
 }
 
@@ -70,7 +67,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve provider and host
-	prov, host, err := resolveProviderAndHost(input, loginProvider, loginTimeout)
+	prov, host, err := resolveProviderAndHost(input, loginProvider)
 	if err != nil {
 		return err
 	}
@@ -109,17 +106,11 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// Perform authentication
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(loginTimeout)*time.Second)
-	defer cancel()
+	ctx := context.Background()
 	token, err := prov.Authenticate(ctx)
 	if err != nil {
 		errMsg := fmt.Sprintf("authentication failed: %v", err)
-		if strings.Contains(err.Error(), "context deadline exceeded") {
-			errMsg += fmt.Sprintf("\n\nThe operation timed out after %d seconds. Try:\n"+
-				"- Increasing the timeout: --timeout 60\n"+
-				"- Checking your internet connection\n"+
-				"- Verifying the host is accessible: curl https://%s", loginTimeout, host)
-		} else if strings.Contains(err.Error(), "client ID") {
+		if strings.Contains(err.Error(), "client ID") {
 			errMsg += "\n\nFor self-hosted instances, you need to create an OAuth application.\n" +
 				"See the instructions above or use --dry-run to preview the configuration."
 		}
@@ -151,7 +142,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 }
 
 // resolveProviderAndHost determines the provider and host from the input
-func resolveProviderAndHost(input, providerFlag string, timeout int) (provider.Provider, string, error) {
+func resolveProviderAndHost(input, providerFlag string) (provider.Provider, string, error) {
 	// Check if input is a provider alias
 	if reg, ok := provider.GetRegistration(input); ok {
 		// It's a provider alias
@@ -176,16 +167,15 @@ func resolveProviderAndHost(input, providerFlag string, timeout int) (provider.P
 	}
 
 	// Input is a host
-	return resolveProviderForHost(input, providerFlag, timeout)
+	return resolveProviderForHost(input, providerFlag)
 }
 
 // resolveProviderForHost handles the case where input is a host
-func resolveProviderForHost(host, providerFlag string, timeout int) (provider.Provider, string, error) {
+func resolveProviderForHost(host, providerFlag string) (provider.Provider, string, error) {
 	if providerFlag == "auto" {
 		// Auto-detect provider type
 		fmt.Printf("Detecting provider type for %s by querying API...\n", host)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
-		defer cancel()
+		ctx := context.Background()
 
 		prov, err := provider.Detect(ctx, host, loginClientID)
 		if err != nil {

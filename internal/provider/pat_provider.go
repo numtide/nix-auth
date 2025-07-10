@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/cli/browser"
 )
@@ -95,11 +94,7 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 		return "", fmt.Errorf("token cannot be empty")
 	}
 
-	// Use a new context with timeout only for validation
-	validateCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	status, err := p.ValidateToken(validateCtx, token)
+	status, err := p.ValidateToken(ctx, token)
 	if status != ValidationStatusValid {
 		if err != nil {
 			return "", fmt.Errorf("invalid token: %w", err)
