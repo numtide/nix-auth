@@ -30,4 +30,5 @@ func init() {
 	rootCmd.AddCommand(loginCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(logoutCmd)
+	rootCmd.AddCommand(setTokenCmd)
 }
