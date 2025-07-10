@@ -1,4 +1,4 @@
-# nix-auth
+# <img src=banner2.svg width=100% alt=nix-auth>
 
 Tired of hitting rate limits when running `nix flake update`? Trying to
 fetch a private repository in your flake inputs or builtin fetchers?
