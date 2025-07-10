@@ -77,7 +77,7 @@ func TestRunSetToken(t *testing.T) {
 				return configFile
 			},
 			expectedOutputs: []string{
-				"Successfully set token for test.example.com: test****-123",
+				"Successfully set token for test.example.com: test********",
 				"Config saved to:",
 			},
 		},
@@ -95,7 +95,7 @@ func TestRunSetToken(t *testing.T) {
 			mockStdin: "interactive-token-456\n",
 			expectedOutputs: []string{
 				"Enter token for test.example.com:",
-				"Successfully set token for test.example.com: inte****-456",
+				"Successfully set token for test.example.com: inte********",
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestRunSetToken(t *testing.T) {
 				return configFile
 			},
 			expectedOutputs: []string{
-				"Successfully set token for test.example.com: new-****-789",
+				"Successfully set token for test.example.com: ********",
 			},
 		},
 		{
@@ -131,7 +131,7 @@ func TestRunSetToken(t *testing.T) {
 			},
 			mockStdin: "n\n",
 			expectedOutputs: []string{
-				"Token already exists for test.example.com: old-****-123",
+				"Token already exists for test.example.com: ********",
 				"Replace it? (y/N):",
 				"Operation cancelled",
 			},
@@ -151,9 +151,9 @@ func TestRunSetToken(t *testing.T) {
 			},
 			mockStdin: "y\n",
 			expectedOutputs: []string{
-				"Token already exists for test.example.com: old-****-123",
+				"Token already exists for test.example.com: ********",
 				"Replace it? (y/N):",
-				"Successfully set token for test.example.com: new-****-789",
+				"Successfully set token for test.example.com: ********",
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestRunSetToken(t *testing.T) {
 			expectedOutputs: []string{
 				"Validating token with test-provider provider...",
 				"Token validated successfully",
-				"Successfully set token for test.example.com: vali****oken",
+				"Successfully set token for test.example.com: ********",
 			},
 		},
 		{
@@ -320,7 +320,7 @@ func TestRunSetToken(t *testing.T) {
 			expectedOutputs: []string{
 				"Detected test-provider provider, validating token...",
 				"Warning: token may not be valid",
-				"Successfully set token for test.example.com: mayb****oken",
+				"Successfully set token for test.example.com: mayb********",
 			},
 			expectError: false,
 		},

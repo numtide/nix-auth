@@ -54,7 +54,7 @@ func TestRunStatus(t *testing.T) {
 			setupConfig: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = github.com=gho_testtoken123
+				content := `access-tokens = github.com=gho_testtoken123456789
 `
 				err := os.WriteFile(configFile, []byte(content), 0644)
 				if err != nil {
@@ -96,7 +96,7 @@ func TestRunStatus(t *testing.T) {
 				"github.com",
 				"Provider  github",
 				"User      testuser (Test User)",
-				"Token     gho_****n123",
+				"Token     gho_******89",
 				"Scopes    repo, read:user",
 				"Status    ✓ Valid",
 			},
@@ -107,7 +107,7 @@ func TestRunStatus(t *testing.T) {
 			setupConfig: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = github.com=gho_validtoken gitlab.com=glpat_invalidtoken
+				content := `access-tokens = github.com=gho_validtoken123456 gitlab.com=glpat_invalidtoken789
 `
 				err := os.WriteFile(configFile, []byte(content), 0644)
 				if err != nil {
@@ -175,11 +175,11 @@ func TestRunStatus(t *testing.T) {
 				"github.com",
 				"Provider  github",
 				"User      ghuser (GitHub User)",
-				"Token     gho_****oken",
+				"Token     gho_******56",
 				"Status    ✓ Valid",
 				"gitlab.com",
 				"Provider  gitlab",
-				"Token     glpa****oken",
+				"Token     glpa********",
 				"Status    ✗ Invalid - 401 Unauthorized",
 			},
 			expectError: false,
@@ -189,7 +189,7 @@ func TestRunStatus(t *testing.T) {
 			setupConfig: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = unknown.host.com=token1234567890
+				content := `access-tokens = unknown.host.com=token123456789012345
 `
 				err := os.WriteFile(configFile, []byte(content), 0644)
 				if err != nil {
@@ -205,7 +205,7 @@ func TestRunStatus(t *testing.T) {
 				"unknown.host.com",
 				"Provider  unknown",
 				"Status    ⚠ Unknown (unverified)",
-				"Token     toke****7890",
+				"Token     toke********",
 				"Scopes    None",
 			},
 			expectError: false,
