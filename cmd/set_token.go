@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/numtide/nix-auth/internal/config"
+	"github.com/numtide/nix-auth/internal/nixconf"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
 	"github.com/spf13/cobra"
@@ -44,7 +44,7 @@ If a provider is specified or detected, the token will be validated before savin
 		host := args[0]
 
 		// Initialize config
-		cfg, err := config.New(configPath)
+		cfg, err := nixconf.New(configPath)
 		if err != nil {
 			return fmt.Errorf("failed to initialize config: %w", err)
 		}
@@ -139,7 +139,7 @@ If a provider is specified or detected, the token will be validated before savin
 
 		maskedToken := ui.MaskToken(token)
 		fmt.Printf("Successfully set token for %s: %s\n", host, maskedToken)
-		fmt.Printf("Config saved to: %s\n", cfg.GetPath())
+		fmt.Printf("Config saved to: %s\n", cfg.GetTokenFilePath())
 
 		return nil
 	},

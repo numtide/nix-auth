@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/numtide/nix-auth/internal/config"
+	"github.com/numtide/nix-auth/internal/nixconf"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
 	"github.com/spf13/cobra"
@@ -94,7 +94,7 @@ func runLogin(_ *cobra.Command, args []string) error {
 	}
 
 	// Check if token already exists
-	cfg, err := config.New(configPath)
+	cfg, err := nixconf.New(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}

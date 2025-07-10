@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/numtide/nix-auth/internal/config"
+	"github.com/numtide/nix-auth/internal/nixconf"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func Execute() error {
 
 func init() {
 	// Add persistent flag for config path
-	defaultPath := config.DefaultUserConfigPath()
+	defaultPath := nixconf.DefaultUserConfigPath()
 	flagDesc := fmt.Sprintf("Path to nix.conf file (default: %s)", defaultPath)
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", flagDesc)
 

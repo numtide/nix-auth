@@ -314,8 +314,8 @@ func TestStatusCommandIntegration(t *testing.T) {
 		t.Error("statusCmd should not be nil")
 	}
 
-	if statusCmd.Use != "status" {
-		t.Errorf("expected Use to be 'status', got %q", statusCmd.Use)
+	if statusCmd.Use != "status [host...]" {
+		t.Errorf("expected Use to be 'status [host...]', got %q", statusCmd.Use)
 	}
 
 	if statusCmd.RunE == nil {

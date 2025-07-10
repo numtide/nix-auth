@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/numtide/nix-auth/internal/config"
+	"github.com/numtide/nix-auth/internal/nixconf"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
 	"github.com/spf13/cobra"
@@ -25,7 +25,7 @@ You can specify either a provider name (github, gitlab) or a full host.`,
 }
 
 func runLogout(_ *cobra.Command, args []string) error {
-	cfg, err := config.New(configPath)
+	cfg, err := nixconf.New(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
@@ -48,7 +48,7 @@ func runLogout(_ *cobra.Command, args []string) error {
 }
 
 // logoutInteractive handles the interactive logout flow.
-func logoutInteractive(cfg *config.NixConfig) error {
+func logoutInteractive(cfg *nixconf.NixConfig) error {
 	hosts, err := cfg.ListTokens()
 	if err != nil {
 		return fmt.Errorf("failed to list tokens: %w", err)
@@ -84,7 +84,7 @@ func logoutInteractive(cfg *config.NixConfig) error {
 	return removeToken(cfg, hosts[choice-1])
 }
 
-func removeToken(cfg *config.NixConfig, host string) error {
+func removeToken(cfg *nixconf.NixConfig, host string) error {
 	fmt.Printf("Removing token for %s...\n", host)
 
 	if err := cfg.RemoveToken(host); err != nil {

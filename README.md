@@ -10,7 +10,7 @@ to get those tokens in the right place.
 
 - OAuth device flow authentication when possible (no manual token creation needed)
 - Support for multiple providers (GitHub, GitHub Enterprise, GitLab, Gitea, and Forgejo)
-- Token storage in `~/.config/nix/nix.conf`
+- Secure token storage in separate `~/.config/nix/access-tokens.conf` file with restricted permissions
 - Token validation and status checking
 - Automatic backup creation before modifying configuration
 
@@ -86,7 +86,7 @@ The tool will:
 1. Display a one-time code
 2. Open your browser to the provider's device authorization page
 3. Wait for you to authorize the application
-4. Save the token to `~/.config/nix/nix.conf`
+4. Save the token to `~/.config/nix/access-tokens.conf` (with restricted 0600 permissions)
 
 **Note for self-hosted instances**:
 - **GitHub Enterprise**: You'll need to create an OAuth App and provide the client ID via `--client-id`
@@ -132,17 +132,26 @@ nix-auth logout --host github.company.com
 
 ## How It Works
 
-The tool manages the `access-tokens` configuration in your `~/.config/nix/nix.conf` file. This allows Nix to authenticate when fetching flake inputs from private repositories or builtins fetchers, and hitting rate limits.
+The tool manages access tokens in a secure, separate configuration file that is included by your main Nix configuration. This allows Nix to authenticate when fetching flake inputs from private repositories or builtins fetchers, and avoiding rate limits.
 
-Example configuration added by this tool:
-```
-access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxxx github.company.com=ghp_yyyyyyyy
-```
+The tool automatically:
+1. Creates `~/.config/nix/access-tokens.conf` with restricted permissions (0600)
+2. Adds an include directive to your `~/.config/nix/nix.conf`:
+   ```
+   !include access-tokens.conf
+   ```
+3. Stores tokens in the secure file:
+   ```
+   access-tokens = github.com=ghp_xxxxxxxxxxxxxxxxxxxx gitlab.com=glpat-xxxxxxxxxxxx
+   ```
+
+This separation ensures your tokens are stored with proper security permissions while keeping your main configuration readable.
 
 ## Security
 
-- Tokens are stored locally in your Nix configuration
+- Tokens are stored in a separate file (`access-tokens.conf`) with restricted permissions (0600)
 - The tool creates automatic backups before modifying your configuration
+- Automatically migrates existing tokens from `nix.conf` to the secure token file
 - Uses OAuth device flow for secure authentication
 - Minimal required permissions (only necessary scopes for accessing repositories)
 
