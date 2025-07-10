@@ -1,3 +1,4 @@
+// Package ui provides user interface utilities for terminal interactions.
 package ui
 
 import (
@@ -5,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"golang.org/x/term"
 )
@@ -16,22 +16,28 @@ func ReadSecureInput(prompt string) (string, error) {
 	fmt.Print(prompt)
 
 	// Check if stdin is a terminal
-	if term.IsTerminal(int(syscall.Stdin)) {
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
 		// Use secure password input for terminals
-		byteInput, err := term.ReadPassword(int(syscall.Stdin))
+		byteInput, err := term.ReadPassword(fd)
+
 		fmt.Println() // Add newline after password input
+
 		if err != nil {
 			return "", fmt.Errorf("failed to read input: %w", err)
 		}
+
 		return strings.TrimSpace(string(byteInput)), nil
 	}
 
 	// For non-terminal input (like tests or piped input)
 	reader := bufio.NewReader(os.Stdin)
+
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %w", err)
 	}
+
 	return strings.TrimSpace(strings.TrimSuffix(input, "\n")), nil
 }
 
@@ -40,10 +46,12 @@ func ReadInput(prompt string) (string, error) {
 	fmt.Print(prompt)
 
 	reader := bufio.NewReader(os.Stdin)
+
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %w", err)
 	}
+
 	return strings.TrimSpace(strings.TrimSuffix(input, "\n")), nil
 }
 
@@ -54,5 +62,6 @@ func ReadYesNo(prompt string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return response == "y" || response == "Y", nil
 }

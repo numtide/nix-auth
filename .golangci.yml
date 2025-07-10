@@ -1,0 +1,215 @@
+# golangci-lint configuration for nix-auth
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Include test files
+  tests: true
+
+  # List of build tags to use
+  build-tags:
+    - integration
+
+linters:
+  default: standard
+  enable:
+    # Additional linters for code quality
+    - bodyclose      # Checks whether HTTP response body is closed successfully
+    - dogsled        # Checks assignments with too many blank identifiers
+    - dupl           # Tool for code clone detection
+    - copyloopvar    # Checks for unpinned variables in go programs
+    - gocognit       # Computes cognitive complexity of functions
+    - goconst        # Finds repeated strings that could be replaced by constants
+    - gocritic       # Provides diagnostics that check for bugs, performance and style issues
+    - gocyclo        # Computes cyclomatic complexity of functions
+    - godot          # Check if comments end in a period
+    - mnd            # Detects magic numbers (replaces gomnd)
+    - goprintffuncname # Checks that printf-like functions are named with `f` at the end
+    - gosec          # Security checker
+    - misspell       # Finds commonly misspelled English words in comments
+    - nakedret       # Finds naked returns in functions greater than a specified function length
+    - nestif         # Reports deeply nested if statements
+    - nilerr         # Finds the code that returns nil even if it checks that the error is not nil
+    - noctx          # Finds sending http request without context.Context
+    - nolintlint     # Reports ill-formed or insufficient nolint directives
+    - prealloc       # Finds slice declarations that could potentially be preallocated
+    - predeclared    # Find code that shadows one of Go's predeclared identifiers
+    - revive         # Fast, configurable, extensible, flexible, and beautiful linter for Go
+    - rowserrcheck   # Checks whether Err of rows is checked successfully
+    - sqlclosecheck  # Checks that sql.Rows and sql.Stmt are closed
+    - thelper        # Detects Go test helpers without t.Helper() call
+    - tparallel      # Detects inappropriate usage of t.Parallel() method in your Go test codes
+    - unconvert      # Remove unnecessary type conversions
+    - unparam        # Reports unused function parameters
+    - whitespace     # Tool for detection of leading and trailing whitespace
+    - wsl            # Whitespace Linter
+
+  disable:
+    - depguard       # Checks if package imports are in a list of acceptable packages
+    - exhaustive     # Check exhaustiveness of enum switch statements
+    - funlen         # Tool for detection of long functions
+    - gochecknoglobals # Check that no global variables exist
+    - godox          # Tool for detection of FIXME, TODO and other comment keywords
+    - err113         # Golang linter to check the errors handling expressions
+    - wrapcheck      # Checks that errors returned from external packages are wrapped
+
+  exclusions:
+    paths:
+      - vendor
+      - .git
+      - testdata
+    files:
+      - ".*\\.pb\\.go$"
+      - ".*\\.gen\\.go$"
+
+formatters:
+  enable:
+    - gci            # Controls Go package import order and makes it deterministic
+    - gofmt          # Checks whether code was gofmt-ed
+    - goimports      # Check import statements are formatted according to the 'goimport' command
+
+  exclusions:
+    paths:
+      - vendor
+      - .git
+      - testdata
+    files:
+      - ".*\\.pb\\.go$"
+      - ".*\\.gen\\.go$"
+
+linters-settings:
+  errcheck:
+    # Don't report errors for defer Close() calls
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+      - (*io.PipeWriter).Close
+      - (*bytes.Buffer).WriteTo
+      - (*strings.Builder).WriteTo
+
+  govet:
+    # Enable all analyzers
+    enable-all: true
+
+  gocyclo:
+    # Minimal code complexity to report
+    min-complexity: 15
+
+  dupl:
+    # Tokens count to trigger issue
+    threshold: 100
+
+  goconst:
+    # Minimal length of string constant
+    min-len: 3
+    # Minimal occurrences count to trigger
+    min-occurrences: 3
+
+  misspell:
+    # Locale to use
+    locale: US
+
+  mnd:
+    # Don't include the "operation" and "assign"
+    checks: [argument,case,condition,return]
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+  goimports:
+    # Put local imports after 3rd-party packages
+    local-prefixes: github.com/numtide/nix-auth
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/numtide/nix-auth)
+
+  nolintlint:
+    # Enable to ensure that nolint directives are all used
+    allow-unused: false
+    # Exclude following linters from requiring an explanation
+    allow-no-explanation: []
+    # Enable to require an explanation of nonzero length for nolint directives
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter
+    require-specific: true
+
+  revive:
+    # Accept interfaces, return concrete types
+    confidence: 0.8
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+issues:
+  # Exclude some linters from running on tests files
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - mnd
+    # Exclude G104 (error handling) from specific files
+    - linters:
+        - gosec
+      text: "G104"
+
+  # Maximum issues count per one linter. Set to 0 to disable
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable
+  max-same-issues: 0
+
+  # Show only new issues created after git revision
+  new: false
+
+  # Fix found issues (if it's supported by the linter)
+  fix: false
+
+severity:
+  # Set the default severity for issues
+  default: warning
+
+  # The list of ids of default excludes to include or disable
+  rules:
+    - linters:
+        - gosec
+      text: "G104" # Errors unhandled
+      severity: info

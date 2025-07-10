@@ -1,3 +1,4 @@
+// Package provider implements authentication providers for various Git hosting services.
 package provider
 
 import (
@@ -6,11 +7,16 @@ import (
 	"time"
 )
 
-// Detect attempts to identify the provider type by querying various API endpoints
+const (
+	// detectionTimeout is the timeout for provider detection requests.
+	detectionTimeout = 3 * time.Second
+)
+
+// Detect attempts to identify the provider type by querying various API endpoints.
 func Detect(ctx context.Context, host, clientID string) (Provider, error) {
 	// Create a client with timeout
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: detectionTimeout,
 	}
 
 	// Try each registered provider in preferred order
@@ -23,21 +29,23 @@ func Detect(ctx context.Context, host, clientID string) (Provider, error) {
 		provider, err := reg.Detect(ctx, client, host)
 		if err != nil {
 			// Network error - return unknown provider with the host set
-			return NewUnknownProvider(host), nil
+			return NewUnknownProvider(host), nil //nolint:nilerr // Network errors during detection are not fatal
 		}
+
 		if provider != nil {
 			// Found a matching provider
 			// If clientID is provided, recreate with proper config
 			if clientID != "" {
-				cfg := ProviderConfig{
+				cfg := Config{
 					Host:     host,
 					ClientID: clientID,
 				}
+
 				return reg.New(cfg), nil
 			}
+
 			return provider, nil
 		}
-		// provider is nil - this detector doesn't match, try the next one
 	}
 
 	// If no specific provider matched, use the unknown provider

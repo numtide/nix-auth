@@ -64,16 +64,17 @@ func TestDefaultUserConfigPath(t *testing.T) {
 			savedEnvVars := make(map[string]string)
 			for key := range tt.envVars {
 				savedEnvVars[key] = os.Getenv(key)
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
+
 			savedEnvVars["XDG_CONFIG_HOME"] = os.Getenv("XDG_CONFIG_HOME")
 			savedEnvVars["NIX_USER_CONF_FILES"] = os.Getenv("NIX_USER_CONF_FILES")
-			os.Unsetenv("XDG_CONFIG_HOME")
-			os.Unsetenv("NIX_USER_CONF_FILES")
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+			_ = os.Unsetenv("NIX_USER_CONF_FILES")
 
 			// Set test env vars
 			for key, value := range tt.envVars {
-				os.Setenv(key, value)
+				_ = os.Setenv(key, value)
 			}
 
 			// Test
@@ -85,9 +86,9 @@ func TestDefaultUserConfigPath(t *testing.T) {
 			// Restore env vars
 			for key, value := range savedEnvVars {
 				if value == "" {
-					os.Unsetenv(key)
+					_ = os.Unsetenv(key)
 				} else {
-					os.Setenv(key, value)
+					_ = os.Setenv(key, value)
 				}
 			}
 		})
@@ -126,6 +127,7 @@ func TestNixConfig_SetAndGetToken(t *testing.T) {
 			if err != nil {
 				t.Errorf("GetToken(%q) error = %v", tt.host, err)
 			}
+
 			if got != tt.token {
 				t.Errorf("GetToken(%q) = %v, want %v", tt.host, got, tt.token)
 			}
@@ -137,15 +139,17 @@ func TestNixConfig_SetAndGetToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTokens() error = %v", err)
 	}
+
 	if len(hosts) != len(tests) {
 		t.Errorf("ListTokens() returned %d hosts, want %d", len(hosts), len(tests))
 	}
 
 	// Verify file format
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
+
 	if !strings.Contains(string(content), "access-tokens = ") {
 		t.Errorf("Config file does not contain 'access-tokens = ' line")
 	}
@@ -161,7 +165,7 @@ experimental-features = nix-command flakes
 access-tokens = github.com=old_token
 # More config
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -171,7 +175,7 @@ access-tokens = github.com=old_token
 	}
 
 	// Update existing token
-	newToken := "new_github_token"
+	newToken := "new_github_token" //nolint:gosec // test token
 	if err := cfg.SetToken("github.com", newToken); err != nil {
 		t.Fatalf("SetToken() error = %v", err)
 	}
@@ -181,15 +185,17 @@ access-tokens = github.com=old_token
 	if err != nil {
 		t.Fatalf("GetToken() error = %v", err)
 	}
+
 	if got != newToken {
 		t.Errorf("GetToken() = %v, want %v", got, newToken)
 	}
 
 	// Verify other config lines are preserved
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
+
 	if !strings.Contains(string(content), "experimental-features = nix-command flakes") {
 		t.Errorf("Config file lost existing configuration")
 	}
@@ -227,6 +233,7 @@ func TestNixConfig_RemoveToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetToken() error = %v", err)
 	}
+
 	if got != "" {
 		t.Errorf("GetToken(gitlab.com) = %v, want empty", got)
 	}
@@ -236,10 +243,12 @@ func TestNixConfig_RemoveToken(t *testing.T) {
 		if host == "gitlab.com" {
 			continue
 		}
+
 		got, err := cfg.GetToken(host)
 		if err != nil {
 			t.Errorf("GetToken(%q) error = %v", host, err)
 		}
+
 		if got != expectedToken {
 			t.Errorf("GetToken(%q) = %v, want %v", host, got, expectedToken)
 		}
@@ -260,7 +269,7 @@ func TestNixConfig_RemoveLastToken(t *testing.T) {
 	initialContent := `experimental-features = nix-command flakes
 access-tokens = github.com=only_token
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -275,10 +284,11 @@ access-tokens = github.com=only_token
 	}
 
 	// Verify access-tokens line was removed
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
+
 	if strings.Contains(string(content), "access-tokens") {
 		t.Errorf("access-tokens line should be removed when no tokens remain")
 	}
@@ -294,7 +304,7 @@ func TestNixConfig_Backup(t *testing.T) {
 
 	// Create initial config
 	initialContent := "initial content"
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -315,6 +325,7 @@ func TestNixConfig_Backup(t *testing.T) {
 	}
 
 	var backupFile string
+
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), "nix.conf.backup-") {
 			backupFile = f.Name()
@@ -326,10 +337,11 @@ func TestNixConfig_Backup(t *testing.T) {
 		t.Errorf("No backup file found")
 	} else {
 		// Verify backup content
-		backupContent, err := os.ReadFile(filepath.Join(tmpDir, backupFile))
+		backupContent, err := os.ReadFile(filepath.Join(tmpDir, backupFile)) //nolint:gosec // test file path
 		if err != nil {
 			t.Fatalf("ReadFile(backup) error = %v", err)
 		}
+
 		if string(backupContent) != initialContent {
 			t.Errorf("Backup content = %q, want %q", string(backupContent), initialContent)
 		}
@@ -341,7 +353,7 @@ func TestNixConfig_EmptyFile(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "nix.conf")
 
 	// Create empty file
-	if err := os.WriteFile(configPath, []byte(""), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(""), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -355,6 +367,7 @@ func TestNixConfig_EmptyFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTokens() error = %v", err)
 	}
+
 	if len(hosts) != 0 {
 		t.Errorf("ListTokens() = %v, want empty", hosts)
 	}
@@ -379,6 +392,7 @@ func TestNixConfig_NonExistentFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTokens() error = %v", err)
 	}
+
 	if len(hosts) != 0 {
 		t.Errorf("ListTokens() = %v, want empty", hosts)
 	}
@@ -422,7 +436,7 @@ func TestNixConfig_InvalidTokenFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := os.WriteFile(configPath, []byte(tt.content), 0644); err != nil {
+			if err := os.WriteFile(configPath, []byte(tt.content), 0600); err != nil {
 				t.Fatalf("WriteFile() error = %v", err)
 			}
 
@@ -453,7 +467,7 @@ access-tokens = github.com=token1
 # Another comment
 trusted-users = root user
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -468,7 +482,7 @@ trusted-users = root user
 	}
 
 	// Read back content
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
@@ -486,12 +500,14 @@ trusted-users = root user
 
 	for _, pattern := range expectedPatterns {
 		found := false
+
 		for _, line := range lines {
 			if strings.Contains(line, pattern) {
 				found = true
 				break
 			}
 		}
+
 		if !found {
 			t.Errorf("Pattern %q not found in output", pattern)
 		}
@@ -548,6 +564,7 @@ func TestNixConfig_ConcurrentAccess(t *testing.T) {
 		if err != nil {
 			t.Errorf("GetToken(%q) error = %v", host, err)
 		}
+
 		if got != expectedToken {
 			t.Errorf("GetToken(%q) = %v, want %v", host, got, expectedToken)
 		}
@@ -605,14 +622,16 @@ func TestNixConfig_SortedOutput(t *testing.T) {
 	}
 
 	// Read the file and verify tokens are sorted
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
 
 	// Extract the access-tokens line
 	lines := strings.Split(string(content), "\n")
+
 	var accessTokensLine string
+
 	for _, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "access-tokens") {
 			accessTokensLine = line
@@ -636,6 +655,7 @@ func TestNixConfig_SortedOutput(t *testing.T) {
 	if len(listedHosts) != len(expectedHosts) {
 		t.Errorf("ListTokens() returned %d hosts, want %d", len(listedHosts), len(expectedHosts))
 	}
+
 	for i, host := range listedHosts {
 		if host != expectedHosts[i] {
 			t.Errorf("ListTokens()[%d] = %q, want %q", i, host, expectedHosts[i])
@@ -672,7 +692,7 @@ extra-option = value
 
 # End of file comment`
 
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -687,7 +707,7 @@ extra-option = value
 	}
 
 	// Read back the content
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
@@ -718,6 +738,7 @@ extra-option = value
 	// Verify only the access-tokens line was modified
 	lines := strings.Split(contentStr, "\n")
 	modifiedLines := 0
+
 	var accessTokensLine string
 
 	originalLines := strings.Split(initialContent, "\n")
@@ -725,6 +746,7 @@ extra-option = value
 		if i < len(originalLines) {
 			if line != originalLines[i] {
 				modifiedLines++
+
 				if strings.HasPrefix(strings.TrimSpace(line), "access-tokens") {
 					accessTokensLine = line
 				}
@@ -753,7 +775,7 @@ func TestNixConfig_PreservesComplexIndentation(t *testing.T) {
 		access-tokens = github.com=oldtoken
 another-option = value`
 
-	if err := os.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -768,7 +790,7 @@ another-option = value`
 	}
 
 	// Read back and verify indentation is preserved
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // test file path
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}

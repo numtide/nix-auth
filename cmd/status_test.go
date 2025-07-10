@@ -13,6 +13,103 @@ import (
 	"github.com/numtide/nix-auth/internal/provider"
 )
 
+// captureStatusOutput captures the stdout output from running the status command.
+func captureStatusOutput(t *testing.T) (string, error) {
+	t.Helper()
+
+	var buf bytes.Buffer
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Run command
+	err := runStatus(nil, []string{})
+
+	// Restore stdout
+	_ = w.Close()
+
+	os.Stdout = oldStdout
+
+	_, _ = buf.ReadFrom(r)
+
+	return buf.String(), err
+}
+
+// setupMockGitHubProvider sets up a mock GitHub provider.
+func setupMockGitHubProvider(valid bool) {
+	provider.RegisterProvider("github", provider.Registration{
+		New: func(cfg provider.Config) provider.Provider {
+			return &mockStatusProvider{
+				name:     "github",
+				host:     cfg.Host,
+				valid:    valid,
+				scopes:   []string{"repo", "read:user"},
+				username: "testuser",
+				fullName: "Test User",
+			}
+		},
+		Detect: func(_ context.Context, _ *http.Client, host string) (provider.Provider, error) {
+			if host == "github.com" {
+				return &mockStatusProvider{
+					name:     "github",
+					host:     host,
+					valid:    valid,
+					scopes:   []string{"repo", "read:user"},
+					username: "testuser",
+					fullName: "Test User",
+				}, nil
+			}
+			return nil, nil
+		},
+	})
+}
+
+// setupMockGitLabProvider sets up a mock GitLab provider.
+func setupMockGitLabProvider(valid bool) {
+	provider.RegisterProvider("gitlab", provider.Registration{
+		New: func(cfg provider.Config) provider.Provider {
+			return &mockStatusProvider{
+				name:       "gitlab",
+				host:       cfg.Host,
+				valid:      valid,
+				validError: fmt.Errorf("401 Unauthorized"),
+				scopes:     []string{},
+				username:   "",
+				fullName:   "",
+			}
+		},
+		Detect: func(_ context.Context, _ *http.Client, host string) (provider.Provider, error) {
+			if host == "gitlab.com" {
+				return &mockStatusProvider{
+					name:       "gitlab",
+					host:       host,
+					valid:      valid,
+					validError: fmt.Errorf("401 Unauthorized"),
+					scopes:     []string{},
+					username:   "",
+					fullName:   "",
+				}, nil
+			}
+			return nil, nil
+		},
+	})
+}
+
+// createTestConfig creates a test configuration file with the given content.
+func createTestConfig(t *testing.T, content string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "nix.conf")
+
+	err := os.WriteFile(configFile, []byte(content), 0600)
+	if err != nil {
+		t.Fatalf("failed to create config file: %v", err)
+	}
+
+	return configFile
+}
+
 func TestRunStatus(t *testing.T) {
 	// Save original values
 	originalConfigPath := configPath
@@ -20,6 +117,7 @@ func TestRunStatus(t *testing.T) {
 
 	defer func() {
 		configPath = originalConfigPath
+
 		provider.SetRegistry(originalRegistry)
 	}()
 
@@ -33,14 +131,8 @@ func TestRunStatus(t *testing.T) {
 		{
 			name: "no tokens configured",
 			setupConfig: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				configFile := filepath.Join(tmpDir, "nix.conf")
-				// Create empty config file
-				err := os.WriteFile(configFile, []byte(""), 0644)
-				if err != nil {
-					t.Fatalf("failed to create config file: %v", err)
-				}
-				return configFile
+				t.Helper()
+				return createTestConfig(t, "")
 			},
 			setupProviders: func() {},
 			expectedOutput: []string{
@@ -52,44 +144,13 @@ func TestRunStatus(t *testing.T) {
 		{
 			name: "single github token valid",
 			setupConfig: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = github.com=gho_testtoken123456789
-`
-				err := os.WriteFile(configFile, []byte(content), 0644)
-				if err != nil {
-					t.Fatalf("failed to create config file: %v", err)
-				}
-				return configFile
+				t.Helper()
+				return createTestConfig(t, "access-tokens = github.com=gho_testtoken123456789\n")
 			},
 			setupProviders: func() {
 				// Clear registry and add mock provider
-				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
-				provider.RegisterProvider("github", provider.ProviderRegistration{
-					New: func(cfg provider.ProviderConfig) provider.Provider {
-						return &mockStatusProvider{
-							name:     "github",
-							host:     cfg.Host,
-							valid:    true,
-							scopes:   []string{"repo", "read:user"},
-							username: "testuser",
-							fullName: "Test User",
-						}
-					},
-					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
-						if host == "github.com" {
-							return &mockStatusProvider{
-								name:     "github",
-								host:     host,
-								valid:    true,
-								scopes:   []string{"repo", "read:user"},
-								username: "testuser",
-								fullName: "Test User",
-							}, nil
-						}
-						return nil, nil
-					},
-				})
+				provider.SetRegistry(make(map[string]*provider.Registration))
+				setupMockGitHubProvider(true)
 			},
 			expectedOutput: []string{
 				"Access Tokens (1 configured",
@@ -105,20 +166,14 @@ func TestRunStatus(t *testing.T) {
 		{
 			name: "multiple tokens with one invalid",
 			setupConfig: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = github.com=gho_validtoken123456 gitlab.com=glpat_invalidtoken789
-`
-				err := os.WriteFile(configFile, []byte(content), 0644)
-				if err != nil {
-					t.Fatalf("failed to create config file: %v", err)
-				}
-				return configFile
+				t.Helper()
+				return createTestConfig(t, "access-tokens = github.com=gho_validtoken123456 gitlab.com=glpat_invalidtoken789\n")
 			},
 			setupProviders: func() {
-				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
-				provider.RegisterProvider("github", provider.ProviderRegistration{
-					New: func(cfg provider.ProviderConfig) provider.Provider {
+				provider.SetRegistry(make(map[string]*provider.Registration))
+				// Override GitHub provider with different user info
+				provider.RegisterProvider("github", provider.Registration{
+					New: func(cfg provider.Config) provider.Provider {
 						return &mockStatusProvider{
 							name:     "github",
 							host:     cfg.Host,
@@ -128,7 +183,7 @@ func TestRunStatus(t *testing.T) {
 							fullName: "GitHub User",
 						}
 					},
-					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
+					Detect: func(_ context.Context, _ *http.Client, host string) (provider.Provider, error) {
 						if host == "github.com" {
 							return &mockStatusProvider{
 								name:     "github",
@@ -142,33 +197,7 @@ func TestRunStatus(t *testing.T) {
 						return nil, nil
 					},
 				})
-				provider.RegisterProvider("gitlab", provider.ProviderRegistration{
-					New: func(cfg provider.ProviderConfig) provider.Provider {
-						return &mockStatusProvider{
-							name:       "gitlab",
-							host:       cfg.Host,
-							valid:      false,
-							validError: fmt.Errorf("401 Unauthorized"),
-							scopes:     []string{},
-							username:   "",
-							fullName:   "",
-						}
-					},
-					Detect: func(ctx context.Context, client *http.Client, host string) (provider.Provider, error) {
-						if host == "gitlab.com" {
-							return &mockStatusProvider{
-								name:       "gitlab",
-								host:       host,
-								valid:      false,
-								validError: fmt.Errorf("401 Unauthorized"),
-								scopes:     []string{},
-								username:   "",
-								fullName:   "",
-							}, nil
-						}
-						return nil, nil
-					},
-				})
+				setupMockGitLabProvider(false)
 			},
 			expectedOutput: []string{
 				"Access Tokens (2 configured",
@@ -187,18 +216,11 @@ func TestRunStatus(t *testing.T) {
 		{
 			name: "unknown provider",
 			setupConfig: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				configFile := filepath.Join(tmpDir, "nix.conf")
-				content := `access-tokens = unknown.host.com=token123456789012345
-`
-				err := os.WriteFile(configFile, []byte(content), 0644)
-				if err != nil {
-					t.Fatalf("failed to create config file: %v", err)
-				}
-				return configFile
+				t.Helper()
+				return createTestConfig(t, "access-tokens = unknown.host.com=token123456789012345\n")
 			},
 			setupProviders: func() {
-				provider.SetRegistry(make(map[string]*provider.ProviderRegistration))
+				provider.SetRegistry(make(map[string]*provider.Registration))
 				// No need to register unknown provider - it's handled internally
 			},
 			expectedOutput: []string{
@@ -221,19 +243,7 @@ func TestRunStatus(t *testing.T) {
 			tt.setupProviders()
 
 			// Capture output
-			var buf bytes.Buffer
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// Run command
-			err := runStatus(nil, []string{})
-
-			// Restore stdout
-			w.Close()
-			os.Stdout = oldStdout
-			buf.ReadFrom(r)
-			output := buf.String()
+			output, err := captureStatusOutput(t)
 
 			// Check error
 			if tt.expectError && err == nil {
@@ -252,11 +262,10 @@ func TestRunStatus(t *testing.T) {
 	}
 }
 
-// mockStatusProvider implements Provider interface for status command testing
+// mockStatusProvider implements Provider interface for status command testing.
 type mockStatusProvider struct {
 	name       string
 	host       string
-	clientID   string
 	valid      bool
 	validError error
 	scopes     []string
@@ -267,14 +276,15 @@ type mockStatusProvider struct {
 func (m *mockStatusProvider) Name() string { return m.name }
 func (m *mockStatusProvider) Host() string { return m.host }
 
-func (m *mockStatusProvider) Authenticate(ctx context.Context) (string, error) {
+func (m *mockStatusProvider) Authenticate(_ context.Context) (string, error) {
 	return "", fmt.Errorf("not implemented")
 }
 
-func (m *mockStatusProvider) ValidateToken(ctx context.Context, token string) (provider.ValidationStatus, error) {
+func (m *mockStatusProvider) ValidateToken(_ context.Context, _ string) (provider.ValidationStatus, error) {
 	if m.valid {
 		return provider.ValidationStatusValid, nil
 	}
+
 	return provider.ValidationStatusInvalid, m.validError
 }
 
@@ -282,48 +292,20 @@ func (m *mockStatusProvider) GetScopes() []string {
 	return m.scopes
 }
 
-func (m *mockStatusProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
+func (m *mockStatusProvider) GetTokenScopes(_ context.Context, _ string) ([]string, error) {
 	if !m.valid {
 		return nil, fmt.Errorf("invalid token")
 	}
+
 	return m.scopes, nil
 }
 
-func (m *mockStatusProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
+func (m *mockStatusProvider) GetUserInfo(_ context.Context, _ string) (string, string, error) {
 	if !m.valid {
 		return "", "", fmt.Errorf("invalid token")
 	}
+
 	return m.username, m.fullName, nil
-}
-
-// mockUnknownProvider implements Provider interface for unknown hosts
-type mockUnknownProvider struct {
-	host string
-}
-
-func (m *mockUnknownProvider) Name() string { return "unknown" }
-func (m *mockUnknownProvider) Host() string { return m.host }
-
-func (m *mockUnknownProvider) Authenticate(ctx context.Context) (string, error) {
-	return "", fmt.Errorf("authentication not supported for unknown provider")
-}
-
-func (m *mockUnknownProvider) ValidateToken(ctx context.Context, token string) (provider.ValidationStatus, error) {
-	// Unknown providers cannot validate tokens
-	return provider.ValidationStatusUnknown, nil
-}
-
-func (m *mockUnknownProvider) GetScopes() []string {
-	return []string{}
-}
-
-func (m *mockUnknownProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
-	// Return empty scopes for unknown providers
-	return []string{}, nil
-}
-
-func (m *mockUnknownProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
-	return "", "", fmt.Errorf("user info not available for unknown provider")
 }
 
 func TestStatusCommandIntegration(t *testing.T) {

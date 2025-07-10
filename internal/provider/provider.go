@@ -5,19 +5,19 @@ import (
 	"net/http"
 )
 
-// ValidationStatus represents the result of token validation
+// ValidationStatus represents the result of token validation.
 type ValidationStatus int
 
 const (
-	// ValidationStatusValid indicates the token is valid
+	// ValidationStatusValid indicates the token is valid.
 	ValidationStatusValid ValidationStatus = iota
-	// ValidationStatusInvalid indicates the token is invalid
+	// ValidationStatusInvalid indicates the token is invalid.
 	ValidationStatusInvalid
-	// ValidationStatusUnknown indicates the token cannot be verified
+	// ValidationStatusUnknown indicates the token cannot be verified.
 	ValidationStatusUnknown
 )
 
-// Provider defines the interface for authentication providers
+// Provider defines the interface for authentication providers.
 type Provider interface {
 	// Name returns the provider name (e.g., "github", "gitlab")
 	Name() string
@@ -42,66 +42,67 @@ type Provider interface {
 	GetTokenScopes(ctx context.Context, token string) ([]string, error)
 }
 
-// ProviderConfig contains configuration for creating a provider
-type ProviderConfig struct {
+// Config contains configuration for creating a provider.
+type Config struct {
 	Host     string
 	ClientID string
 }
 
-// NewProviderFunc is a function that creates a new provider instance with configuration
-type NewProviderFunc func(cfg ProviderConfig) Provider
+// NewProviderFunc is a function that creates a new provider instance with configuration.
+type NewProviderFunc func(cfg Config) Provider
 
 // DetectFunc is a function that attempts to create a provider for a given host
 // Returns nil, nil if the host is not supported by this provider
-// Returns nil, error if there was a network error during detection
+// Returns nil, error if there was a network error during detection.
 type DetectFunc func(ctx context.Context, client *http.Client, host string) (Provider, error)
 
-// ProviderRegistration contains constructor, detector, and default host for a provider
-type ProviderRegistration struct {
+// Registration contains constructor, detector, and default host for a provider.
+type Registration struct {
 	New         NewProviderFunc
 	Detect      DetectFunc
 	DefaultHost string // Default host for this provider (e.g., "github.com" for GitHub)
 }
 
-// registry holds provider registrations
-var registry = make(map[string]*ProviderRegistration)
+// registry holds provider registrations.
+var registry = make(map[string]*Registration)
 
-// GetRegistry returns the registry (for testing)
-func GetRegistry() map[string]*ProviderRegistration {
+// GetRegistry returns the registry (for testing).
+func GetRegistry() map[string]*Registration {
 	return registry
 }
 
-// SetRegistry sets the registry (for testing)
-func SetRegistry(r map[string]*ProviderRegistration) {
+// SetRegistry sets the registry (for testing).
+func SetRegistry(r map[string]*Registration) {
 	registry = r
 }
 
-// RegisterProvider registers both factory and detector for a provider
-func RegisterProvider(name string, reg ProviderRegistration) {
+// RegisterProvider registers both factory and detector for a provider.
+func RegisterProvider(name string, reg Registration) {
 	registry[name] = &reg
 }
 
-// GetRegistration returns the provider registration by name
-func GetRegistration(name string) (*ProviderRegistration, bool) {
+// GetRegistration returns the provider registration by name.
+func GetRegistration(name string) (*Registration, bool) {
 	reg, ok := registry[name]
 	return reg, ok
 }
 
-// Get creates a new instance of a provider by name with default configuration
+// Get creates a new instance of a provider by name with default configuration.
 func Get(name string) (Provider, bool) {
 	reg, ok := registry[name]
 	if !ok {
 		return nil, false
 	}
 	// Use default host from registration
-	cfg := ProviderConfig{
+	cfg := Config{
 		Host: reg.DefaultHost,
 	}
+
 	return reg.New(cfg), true
 }
 
-// GetWithConfig creates a new instance of a provider by name with custom configuration
-func GetWithConfig(name string, cfg ProviderConfig) (Provider, bool) {
+// GetWithConfig creates a new instance of a provider by name with custom configuration.
+func GetWithConfig(name string, cfg Config) (Provider, bool) {
 	reg, ok := registry[name]
 	if !ok {
 		return nil, false
@@ -110,19 +111,21 @@ func GetWithConfig(name string, cfg ProviderConfig) (Provider, bool) {
 	if cfg.Host == "" {
 		cfg.Host = reg.DefaultHost
 	}
+
 	return reg.New(cfg), true
 }
 
-// List returns all registered provider names
+// List returns all registered provider names.
 func List() []string {
 	names := make([]string, 0, len(registry))
 	for name := range registry {
 		names = append(names, name)
 	}
+
 	return names
 }
 
-// ListForDetection returns provider names in the order they should be tried for detection
+// ListForDetection returns provider names in the order they should be tried for detection.
 func ListForDetection() []string {
 	// Define preferred order for detection
 	// GitHub and GitLab are tried first as they're most common
@@ -139,12 +142,14 @@ func ListForDetection() []string {
 	// Add any other registered providers not in the preferred list
 	for name := range registry {
 		found := false
+
 		for _, preferred := range preferredOrder {
 			if name == preferred {
 				found = true
 				break
 			}
 		}
+
 		if !found && name != "codeberg" { // Skip codeberg as it's an alias
 			result = append(result, name)
 		}

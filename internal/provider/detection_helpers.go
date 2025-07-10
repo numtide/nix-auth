@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// detectGiteaOrForgejo detects whether a host is running Gitea or Forgejo
+// detectGiteaOrForgejo detects whether a host is running Gitea or Forgejo.
 func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string) (Provider, error) {
 	// Known hosts
 	lowerHost := strings.ToLower(host)
@@ -37,6 +37,7 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 
 	// For other hosts, check the version endpoint
 	baseURL := fmt.Sprintf("https://%s", host)
+
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/version", baseURL), nil)
 	if err != nil {
 		return nil, err
@@ -46,12 +47,13 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // cleanup
 
 	if resp.StatusCode == http.StatusOK {
 		var data struct {
 			Version string `json:"version"`
 		}
+
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return nil, nil // Not a Gitea/Forgejo instance
 		}

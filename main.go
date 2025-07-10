@@ -1,3 +1,4 @@
+// Package main is the entry point for the nix-auth CLI tool.
 package main
 
 import (

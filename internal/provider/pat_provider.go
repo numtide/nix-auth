@@ -11,24 +11,28 @@ import (
 	"github.com/numtide/nix-auth/internal/ui"
 )
 
-// PersonalAccessTokenProvider provides common functionality for providers that use Personal Access Tokens
+// PersonalAccessTokenProvider provides common functionality for providers that use Personal Access Tokens.
 type PersonalAccessTokenProvider struct {
 	host         string
 	providerName string
 	defaultHost  string
 }
 
+// Name returns the name of the provider.
 func (p *PersonalAccessTokenProvider) Name() string {
 	return p.providerName
 }
 
+// Host returns the hostname for this provider instance.
 func (p *PersonalAccessTokenProvider) Host() string {
 	if p.host != "" {
 		return p.host
 	}
+
 	return p.defaultHost
 }
 
+// GetScopes returns the required scopes for authentication.
 func (p *PersonalAccessTokenProvider) GetScopes() []string {
 	return []string{"read:repository", "read:user"}
 }
@@ -38,6 +42,7 @@ func (p *PersonalAccessTokenProvider) getBaseURL() string {
 	if host != "" {
 		return fmt.Sprintf("https://%s", host)
 	}
+
 	return ""
 }
 
@@ -49,9 +54,11 @@ func (p *PersonalAccessTokenProvider) makeAPIRequest(ctx context.Context, token 
 	headers := map[string]string{
 		"Accept": "application/json",
 	}
+
 	return makeAuthenticatedRequest(ctx, "GET", endpoint, "token "+token, headers)
 }
 
+// Authenticate prompts the user for a personal access token.
 func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string, error) {
 	// Validate that we have a host
 	if p.Host() == "" {
@@ -59,7 +66,9 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 	}
 
 	fmt.Println()
-	fmt.Printf("%s does not support OAuth device flow. You'll need to create a Personal Access Token.\n", strings.Title(p.providerName))
+	// Capitalize first letter of provider name
+	providerDisplay := strings.ToUpper(p.providerName[:1]) + p.providerName[1:]
+	fmt.Printf("%s does not support OAuth device flow. You'll need to create a Personal Access Token.\n", providerDisplay)
 	fmt.Println()
 	fmt.Println("Instructions:")
 	fmt.Printf("1. Go to %s/user/settings/applications\n", p.getBaseURL())
@@ -97,30 +106,37 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 		if err != nil {
 			return "", fmt.Errorf("invalid token: %w", err)
 		}
+
 		return "", fmt.Errorf("invalid token")
 	}
 
 	return token, nil
 }
 
+// ValidateToken checks if the provided token is valid by making an API request.
 func (p *PersonalAccessTokenProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
 	userURL := fmt.Sprintf("%s/user", p.getAPIURL())
+
 	resp, err := p.makeAPIRequest(ctx, token, userURL)
 	if err != nil {
 		return ValidationStatusInvalid, fmt.Errorf("failed to validate token: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer resp.Body.Close() //nolint:errcheck // cleanup
 
 	return ValidationStatusValid, nil
 }
 
+// GetUserInfo retrieves the username and full name associated with the token.
 func (p *PersonalAccessTokenProvider) GetUserInfo(ctx context.Context, token string) (username, fullName string, err error) {
 	userURL := fmt.Sprintf("%s/user", p.getAPIURL())
+
 	resp, err := p.makeAPIRequest(ctx, token, userURL)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get user info: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer resp.Body.Close() //nolint:errcheck // cleanup
 
 	var user struct {
 		Login    string `json:"login"`
@@ -140,6 +156,7 @@ func (p *PersonalAccessTokenProvider) GetUserInfo(ctx context.Context, token str
 	return username, user.FullName, nil
 }
 
-func (p *PersonalAccessTokenProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
+// GetTokenScopes returns the scopes associated with the token.
+func (p *PersonalAccessTokenProvider) GetTokenScopes(_ context.Context, _ string) ([]string, error) {
 	return p.GetScopes(), nil
 }

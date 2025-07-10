@@ -7,7 +7,7 @@ import (
 )
 
 // makeAuthenticatedRequest creates and executes an authenticated HTTP request
-// with common error handling for authentication providers
+// with common error handling for authentication providers.
 func makeAuthenticatedRequest(ctx context.Context, method, url, authHeader string, headers map[string]string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
@@ -23,6 +23,7 @@ func makeAuthenticatedRequest(ctx context.Context, method, url, authHeader strin
 	}
 
 	client := &http.Client{}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -31,12 +32,12 @@ func makeAuthenticatedRequest(ctx context.Context, method, url, authHeader strin
 	// Check common error status codes
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("token is invalid or expired")
 	case http.StatusOK:
 		return resp, nil
 	default:
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 }

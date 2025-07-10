@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	RegisterProvider("gitea", ProviderRegistration{
-		New: func(cfg ProviderConfig) Provider {
+	RegisterProvider("gitea", Registration{
+		New: func(cfg Config) Provider {
 			return &GiteaProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
 					providerName: "gitea",

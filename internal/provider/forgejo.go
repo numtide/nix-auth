@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	RegisterProvider("forgejo", ProviderRegistration{
-		New: func(cfg ProviderConfig) Provider {
+	RegisterProvider("forgejo", Registration{
+		New: func(cfg Config) Provider {
 			return &ForgejoProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
 					providerName: "forgejo",
@@ -21,8 +21,8 @@ func init() {
 	})
 
 	// Codeberg is just an alias with a specific host
-	RegisterProvider("codeberg", ProviderRegistration{
-		New: func(cfg ProviderConfig) Provider {
+	RegisterProvider("codeberg", Registration{
+		New: func(cfg Config) Provider {
 			return &ForgejoProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
 					providerName: "forgejo",
@@ -39,7 +39,7 @@ func init() {
 
 // NewForgejoProviderForHost attempts to create a Forgejo provider for the given host
 // Returns nil, nil if the host is not a Forgejo instance
-// Returns nil, error if there was a network error during detection
+// Returns nil, error if there was a network error during detection.
 func NewForgejoProviderForHost(ctx context.Context, client *http.Client, host string) (Provider, error) {
 	provider, err := detectGiteaOrForgejo(ctx, client, host)
 	if err != nil {
@@ -54,6 +54,7 @@ func NewForgejoProviderForHost(ctx context.Context, client *http.Client, host st
 	return nil, nil // Not a Forgejo instance
 }
 
+// ForgejoProvider implements authentication for Forgejo instances.
 type ForgejoProvider struct {
 	PersonalAccessTokenProvider
 }

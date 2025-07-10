@@ -11,8 +11,8 @@ import (
 )
 
 func init() {
-	RegisterProvider("gitlab", ProviderRegistration{
-		New: func(cfg ProviderConfig) Provider {
+	RegisterProvider("gitlab", Registration{
+		New: func(cfg Config) Provider {
 			return &GitLabProvider{
 				host:     cfg.Host,
 				clientID: cfg.ClientID,

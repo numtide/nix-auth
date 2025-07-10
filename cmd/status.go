@@ -10,8 +10,12 @@ import (
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
-
 	"github.com/spf13/cobra"
+)
+
+const (
+	// tabPadding is the padding for tabwriter output.
+	tabPadding = 2
 )
 
 var statusCmd = &cobra.Command{
@@ -22,7 +26,7 @@ var statusCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
-func runStatus(cmd *cobra.Command, args []string) error {
+func runStatus(_ *cobra.Command, _ []string) error {
 	cfg, err := config.New(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
@@ -37,12 +41,14 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		fmt.Println("No access tokens configured.")
 		fmt.Printf("Config file: %s\n", cfg.GetPath())
 		fmt.Println("\nRun 'nix-auth login' to add a token.")
+
 		return nil
 	}
 
 	fmt.Printf("Access Tokens (%d configured in %s)\n\n", len(hosts), cfg.GetPath())
 
 	ctx := context.Background()
+
 	for i, host := range hosts {
 		if i > 0 {
 			fmt.Println()
@@ -51,7 +57,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		fmt.Printf("%s\n", host)
 
 		// Create a tabwriter for aligned output
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, tabPadding, ' ', 0)
 
 		// Detect provider from host
 		prov, err := provider.Detect(ctx, host, "")
@@ -65,16 +71,18 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 		token, err := cfg.GetToken(host)
 		if err != nil {
-			fmt.Fprintf(w, "  Provider\t%s\n", providerName)
-			fmt.Fprintf(w, "  Status\t%s\n", fmt.Sprintf("✗ Error: %v", err))
-			w.Flush()
+			_, _ = fmt.Fprintf(w, "  Provider\t%s\n", providerName)
+			_, _ = fmt.Fprintf(w, "  Status\t%s\n", fmt.Sprintf("✗ Error: %v", err))
+			_ = w.Flush()
+
 			continue
 		}
 
-		fmt.Fprintf(w, "  Provider\t%s\n", providerName)
+		_, _ = fmt.Fprintf(w, "  Provider\t%s\n", providerName)
 
 		// Validate token and get user info
 		var statusStr string
+
 		validationStatus, validationErr := prov.ValidateToken(ctx, token)
 
 		switch validationStatus {
@@ -84,9 +92,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			username, fullName, err := prov.GetUserInfo(ctx, token)
 			if err == nil {
 				if fullName != "" {
-					fmt.Fprintf(w, "  User\t%s (%s)\n", username, fullName)
+					_, _ = fmt.Fprintf(w, "  User\t%s (%s)\n", username, fullName)
 				} else {
-					fmt.Fprintf(w, "  User\t%s\n", username)
+					_, _ = fmt.Fprintf(w, "  User\t%s\n", username)
 				}
 			}
 		case provider.ValidationStatusInvalid:
@@ -101,20 +109,22 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 		// Mask token for security
 		maskedToken := ui.MaskToken(token)
-		fmt.Fprintf(w, "  Token\t%s\n", maskedToken)
+		_, _ = fmt.Fprintf(w, "  Token\t%s\n", maskedToken)
 
 		// Show token scopes
 		scopes, err := prov.GetTokenScopes(ctx, token)
-		if err != nil {
-			fmt.Fprintf(w, "  Scopes\tUnable to retrieve\n")
-		} else if len(scopes) == 0 {
-			fmt.Fprintf(w, "  Scopes\tNone\n")
-		} else {
-			fmt.Fprintf(w, "  Scopes\t%s\n", strings.Join(scopes, ", "))
+
+		switch {
+		case err != nil:
+			_, _ = fmt.Fprintf(w, "  Scopes\tUnable to retrieve\n")
+		case len(scopes) == 0:
+			_, _ = fmt.Fprintf(w, "  Scopes\tNone\n")
+		default:
+			_, _ = fmt.Fprintf(w, "  Scopes\t%s\n", strings.Join(scopes, ", "))
 		}
 
-		fmt.Fprintf(w, "  Status\t%s\n", statusStr)
-		w.Flush()
+		_, _ = fmt.Fprintf(w, "  Status\t%s\n", statusStr)
+		_ = w.Flush()
 	}
 
 	return nil

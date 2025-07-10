@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	minSetTokenArgs = 1
+	maxSetTokenArgs = 2
+)
+
 var (
 	setTokenForce    bool
 	setTokenProvider string
@@ -33,8 +38,8 @@ If a provider is specified or detected, the token will be validated before savin
 
   # Specify provider for validation
   nix-auth set-token git.company.com --provider gitlab`,
-	Args: cobra.RangeArgs(1, 2),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Args: cobra.RangeArgs(minSetTokenArgs, maxSetTokenArgs),
+	RunE: func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
 		host := args[0]
 
@@ -77,7 +82,7 @@ If a provider is specified or detected, the token will be validated before savin
 
 		// Get token from args or prompt
 		var token string
-		if len(args) == 2 {
+		if len(args) == maxSetTokenArgs {
 			token = args[1]
 		} else {
 			var err error

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,7 @@ using Nix flakes.`,
 	}
 )
 
+// Execute runs the root command and handles any errors.
 func Execute() error {
 	return rootCmd.Execute()
 }

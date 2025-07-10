@@ -25,7 +25,7 @@ func TestDetect_Integration(t *testing.T) {
 		{
 			name: "no matching API returns unknown",
 			setupServer: func() *httptest.Server {
-				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(http.StatusNotFound)
 				}))
 			},
@@ -48,48 +48,36 @@ func TestDetect_Integration(t *testing.T) {
 			ctx := context.Background()
 			provider, err := Detect(ctx, host, "")
 
+			// Validate error expectation
+			if tt.expectError && err == nil {
+				t.Errorf("expected error but got none")
+				return
+			}
+
+			if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// If we expected an error and got one, we're done
 			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if provider == nil {
-					t.Errorf("expected provider but got nil")
-				} else if provider.Name() != tt.expectedProvider {
-					t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider.Name())
-				}
-				// Verify host was set
-				if provider != nil && provider.Host() != host {
-					t.Errorf("expected host %q, got %q", host, provider.Host())
-				}
+				return
+			}
+
+			// Validate provider
+			if provider == nil {
+				t.Errorf("expected provider but got nil")
+				return
+			}
+
+			if provider.Name() != tt.expectedProvider {
+				t.Errorf("expected provider %q, got %q", tt.expectedProvider, provider.Name())
+			}
+
+			// Verify host was set
+			if provider.Host() != host {
+				t.Errorf("expected host %q, got %q", host, provider.Host())
 			}
 		})
 	}
-}
-
-// testDetectionProvider is a minimal provider for testing detection
-type testDetectionProvider struct {
-	name string
-	host string
-}
-
-func (t *testDetectionProvider) Name() string { return t.name }
-func (t *testDetectionProvider) Host() string { return t.host }
-func (t *testDetectionProvider) Authenticate(ctx context.Context) (string, error) {
-	return "", nil
-}
-func (t *testDetectionProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
-	return ValidationStatusValid, nil
-}
-func (t *testDetectionProvider) GetUserInfo(ctx context.Context, token string) (string, string, error) {
-	return "", "", nil
-}
-func (t *testDetectionProvider) GetScopes() []string {
-	return nil
-}
-func (t *testDetectionProvider) GetTokenScopes(ctx context.Context, token string) ([]string, error) {
-	return nil, nil
 }

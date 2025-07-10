@@ -1,14 +1,15 @@
+// Package cmd provides the CLI commands for nix-auth.
 package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
-
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +61,7 @@ func init() {
 	loginCmd.Flags().BoolVar(&loginDryRun, "dry-run", false, "Preview what would happen without authenticating")
 }
 
-func runLogin(cmd *cobra.Command, args []string) error {
+func runLogin(_ *cobra.Command, args []string) error {
 	// Parse the input
 	input := "github" // default
 	if len(args) > 0 {
@@ -81,11 +82,14 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		fmt.Printf("- Provider: %s\n", prov.Name())
 		fmt.Printf("- Host: %s\n", host)
 		fmt.Printf("- OAuth scopes: %s\n", strings.Join(prov.GetScopes(), ", "))
+
 		if loginClientID != "" {
 			fmt.Printf("- Client ID: %s\n", loginClientID)
 		}
+
 		fmt.Printf("- Config file: %s\n", configPath)
 		fmt.Println("\nNo authentication performed. Run without --dry-run to authenticate.")
+
 		return nil
 	}
 
@@ -101,6 +105,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to read confirmation: %w", err)
 		}
+
 		if !confirm {
 			fmt.Println("Login cancelled.")
 			return nil
@@ -109,6 +114,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	// Perform authentication
 	ctx := context.Background()
+
 	token, err := prov.Authenticate(ctx)
 	if err != nil {
 		errMsg := fmt.Sprintf("authentication failed: %v", err)
@@ -116,18 +122,22 @@ func runLogin(cmd *cobra.Command, args []string) error {
 			errMsg += "\n\nFor self-hosted instances, you need to create an OAuth application.\n" +
 				"See the instructions above or use --dry-run to preview the configuration."
 		}
-		return fmt.Errorf(errMsg)
+
+		return errors.New(errMsg)
 	}
 
 	// Validate token
 	fmt.Println("\nValidating token...")
+
 	status, err := prov.ValidateToken(ctx, token)
 	if err != nil && status != provider.ValidationStatusUnknown {
 		return fmt.Errorf("token validation failed: %w", err)
 	}
+
 	if status == provider.ValidationStatusInvalid {
 		return fmt.Errorf("token is invalid")
 	}
+
 	if status == provider.ValidationStatusUnknown {
 		fmt.Println("Warning: Token cannot be verified (unknown provider)")
 	}
@@ -143,7 +153,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// resolveProviderAndHost determines the provider and host from the input
+// resolveProviderAndHost determines the provider and host from the input.
 func resolveProviderAndHost(input, providerFlag string) (provider.Provider, string, error) {
 	// Check if input is a provider alias
 	if reg, ok := provider.GetRegistration(input); ok {
@@ -160,11 +170,12 @@ func resolveProviderAndHost(input, providerFlag string) (provider.Provider, stri
 		}
 
 		// Create provider with config
-		cfg := provider.ProviderConfig{
+		cfg := provider.Config{
 			Host:     host,
 			ClientID: loginClientID,
 		}
 		prov := reg.New(cfg)
+
 		return prov, host, nil
 	}
 
@@ -172,11 +183,12 @@ func resolveProviderAndHost(input, providerFlag string) (provider.Provider, stri
 	return resolveProviderForHost(input, providerFlag)
 }
 
-// resolveProviderForHost handles the case where input is a host
+// resolveProviderForHost handles the case where input is a host.
 func resolveProviderForHost(host, providerFlag string) (provider.Provider, string, error) {
 	if providerFlag == "auto" {
 		// Auto-detect provider type
 		fmt.Printf("Detecting provider type for %s by querying API...\n", host)
+
 		ctx := context.Background()
 
 		prov, err := provider.Detect(ctx, host, loginClientID)
@@ -187,14 +199,16 @@ func resolveProviderForHost(host, providerFlag string) (provider.Provider, strin
 		}
 
 		fmt.Printf("Detected: %s\n\n", prov.Name())
+
 		return prov, host, nil
 	}
 
 	// Use explicitly specified provider
-	cfg := provider.ProviderConfig{
+	cfg := provider.Config{
 		Host:     host,
 		ClientID: loginClientID,
 	}
+
 	prov, ok := provider.GetWithConfig(providerFlag, cfg)
 	if !ok {
 		available := strings.Join(provider.List(), ", ")

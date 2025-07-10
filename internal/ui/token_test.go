@@ -5,6 +5,53 @@ import (
 	"testing"
 )
 
+// hasKnownTokenPrefix checks if a token has a known prefix.
+func hasKnownTokenPrefix(token string) bool {
+	knownPrefixes := []string{"gho_", "ghp_", "ghs_", "github_pat_", "glpat-", "gloas-", "glrt-", "gitea_"}
+	for _, prefix := range knownPrefixes {
+		if strings.HasPrefix(token, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// checkTokenSecurityExposure validates that masked tokens don't expose sensitive parts.
+func checkTokenSecurityExposure(t *testing.T, token, result string) {
+	t.Helper()
+
+	if len(token) < 14 {
+		return
+	}
+
+	hasKnownPrefix := hasKnownTokenPrefix(token)
+
+	if hasKnownPrefix && len(token) > 8 {
+		// Check we're not exposing more than last 2 chars
+		suffix := token[len(token)-8 : len(token)-2]
+		if strings.Contains(result, suffix) {
+			t.Errorf("MaskToken exposed too much of token suffix: %q contains %q", result, suffix)
+		}
+	} else if !hasKnownPrefix {
+		// For unknown tokens, check we're not exposing any suffix
+		suffix := token[len(token)-8:]
+		if strings.Contains(result, suffix) {
+			t.Errorf("MaskToken exposed token suffix: %q contains %q", result, suffix)
+		}
+	}
+
+	// Check that we're not exposing too much of the middle
+	if len(token) > 20 {
+		middle := token[8 : len(token)-8]
+		for i := 0; i < len(middle)-3; i++ {
+			if strings.Contains(result, middle[i:i+4]) {
+				t.Errorf("MaskToken exposed middle section of token: %q contains %q", result, middle[i:i+4])
+			}
+		}
+	}
+}
+
 func TestMaskToken(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -100,38 +147,7 @@ func TestMaskToken(t *testing.T) {
 			}
 
 			// Security check: ensure no sensitive part of the token is exposed
-			if len(tt.token) >= 14 {
-				// For known prefixes, we show last 2 chars
-				hasKnownPrefix := false
-				for _, prefix := range []string{"gho_", "ghp_", "ghs_", "github_pat_", "glpat-", "gloas-", "glrt-", "gitea_"} {
-					if strings.HasPrefix(tt.token, prefix) {
-						hasKnownPrefix = true
-						break
-					}
-				}
-
-				if hasKnownPrefix && len(tt.token) > 8 {
-					// Check we're not exposing more than last 2 chars
-					suffix := tt.token[len(tt.token)-8 : len(tt.token)-2]
-					if strings.Contains(result, suffix) {
-						t.Errorf("MaskToken exposed too much of token suffix: %q contains %q", result, suffix)
-					}
-				} else if !hasKnownPrefix {
-					// For unknown tokens, check we're not exposing any suffix
-					suffix := tt.token[len(tt.token)-8:]
-					if strings.Contains(result, suffix) {
-						t.Errorf("MaskToken exposed token suffix: %q contains %q", result, suffix)
-					}
-				}
-
-				// Check that we're not exposing too much of the middle
-				if len(tt.token) > 20 {
-					middle := tt.token[10:20]
-					if strings.Contains(result, middle) {
-						t.Errorf("MaskToken exposed token middle: %q contains %q", result, middle)
-					}
-				}
-			}
+			checkTokenSecurityExposure(t, tt.token, result)
 		})
 	}
 }
@@ -139,7 +155,7 @@ func TestMaskToken(t *testing.T) {
 func TestMaskTokenSecurity(t *testing.T) {
 	// Test that the function handles Unicode correctly
 	t.Run("unicode token", func(t *testing.T) {
-		token := "test_こんにちは世界1234567890"
+		token := "test_こんにちは世界1234567890" //nolint:gosec // test token
 		result := MaskToken(token)
 		// Should show first 4 bytes, not break Unicode
 		if result != "test********" {
