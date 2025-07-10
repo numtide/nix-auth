@@ -19,33 +19,47 @@ const (
 )
 
 var statusCmd = &cobra.Command{
-	Use:          "status",
+	Use:          "status [host...]",
 	Short:        "Show the status of configured access tokens",
-	Long:         `Display all configured access tokens and validate them with their respective providers.`,
+	Long:         `Display all configured access tokens and validate them with their respective providers.
+
+If no hosts are specified, all configured tokens are shown.
+If one or more hosts are specified, only tokens for those hosts are displayed.`,
 	RunE:         runStatus,
 	SilenceUsage: true,
 }
 
-func runStatus(_ *cobra.Command, _ []string) error {
+func runStatus(_ *cobra.Command, args []string) error {
 	cfg, err := config.New(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-	hosts, err := cfg.ListTokens()
-	if err != nil {
-		return fmt.Errorf("failed to list tokens: %w", err)
+	var hosts []string
+	if len(args) > 0 {
+		// Use the specified hosts
+		hosts = args
+	} else {
+		// Get all configured hosts
+		hosts, err = cfg.ListTokens()
+		if err != nil {
+			return fmt.Errorf("failed to list tokens: %w", err)
+		}
+
+		if len(hosts) == 0 {
+			fmt.Println("No access tokens configured.")
+			fmt.Printf("Config file: %s\n", cfg.GetPath())
+			fmt.Println("\nRun 'nix-auth login' to add a token.")
+
+			return nil
+		}
 	}
 
-	if len(hosts) == 0 {
-		fmt.Println("No access tokens configured.")
-		fmt.Printf("Config file: %s\n", cfg.GetPath())
-		fmt.Println("\nRun 'nix-auth login' to add a token.")
-
-		return nil
+	if len(args) > 0 {
+		fmt.Printf("Access Tokens (showing %d hosts from %s)\n\n", len(hosts), cfg.GetPath())
+	} else {
+		fmt.Printf("Access Tokens (%d configured in %s)\n\n", len(hosts), cfg.GetPath())
 	}
-
-	fmt.Printf("Access Tokens (%d configured in %s)\n\n", len(hosts), cfg.GetPath())
 
 	ctx := context.Background()
 
@@ -73,6 +87,15 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			_, _ = fmt.Fprintf(w, "  Provider\t%s\n", providerName)
 			_, _ = fmt.Fprintf(w, "  Status\t%s\n", fmt.Sprintf("✗ Error: %v", err))
+			_ = w.Flush()
+
+			continue
+		}
+
+		// Check if token is empty (host not configured)
+		if token == "" {
+			_, _ = fmt.Fprintf(w, "  Provider\t%s\n", providerName)
+			_, _ = fmt.Fprintf(w, "  Status\t✗ No token configured\n")
 			_ = w.Flush()
 
 			continue

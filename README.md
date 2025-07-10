@@ -103,6 +103,13 @@ View all configured tokens:
 nix-auth status
 ```
 
+View specific tokens by host:
+
+```bash
+nix-auth status github.com                    # Check a single host
+nix-auth status github.com gitlab.com         # Check multiple hosts
+```
+
 ### Logout
 
 Remove a token interactively:
