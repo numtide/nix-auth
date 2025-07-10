@@ -23,8 +23,8 @@
      inkscape:pagecheckerboard="true"
      inkscape:deskcolor="#000000"
      inkscape:zoom="0.81296296"
-     inkscape:cx="584.28246"
-     inkscape:cy="445.28474"
+     inkscape:cx="751.57176"
+     inkscape:cy="446.51481"
      inkscape:window-width="1920"
      inkscape:window-height="1131"
      inkscape:window-x="0"
@@ -242,6 +242,17 @@
        d="M1726.37 458.845L1860.6 593.079L1726.37 727.312L1592.14 593.079L1726.37 458.845Z"
        stroke="#DFD1C3"
        id="path29" />
+    <text
+       xml:space="preserve"
+       style="font-size:120.889px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:10.0741"
+       x="82.450584"
+       y="448.80096"
+       id="text1"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         x="82.450584"
+         y="448.80096"
+         style="stroke-width:10.0741">Can this text be selected?</tspan></text>
   </g>
   <defs
      id="defs54">
