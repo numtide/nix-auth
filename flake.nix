@@ -38,6 +38,7 @@
             go-tools
             golangci-lint
             gopls
+            goreleaser
           ];
         };
       });
