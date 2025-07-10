@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
+	"github.com/numtide/nix-auth/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -45,12 +47,19 @@ func runLogout(cmd *cobra.Command, args []string) error {
 		for i, host := range hosts {
 			fmt.Printf("  %d. %s\n", i+1, host)
 		}
-		fmt.Print("\nEnter number (or 0 to cancel): ")
 
-		var choice int
-		fmt.Scanln(&choice)
+		response, err := ui.ReadInput("\nEnter number (or 0 to cancel): ")
+		if err != nil {
+			return fmt.Errorf("failed to read choice: %w", err)
+		}
 
-		if choice == 0 || choice > len(hosts) {
+		choice, err := strconv.Atoi(response)
+		if err != nil || choice < 0 || choice > len(hosts) {
+			fmt.Println("Invalid choice. Logout cancelled.")
+			return nil
+		}
+
+		if choice == 0 {
 			fmt.Println("Logout cancelled.")
 			return nil
 		}

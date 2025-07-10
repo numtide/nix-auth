@@ -1,18 +1,13 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
-	"syscall"
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
-	"github.com/numtide/nix-auth/internal/util"
+	"github.com/numtide/nix-auth/internal/ui"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var (
@@ -66,13 +61,14 @@ If a provider is specified or detected, the token will be validated before savin
 		if tokenExists && !setTokenForce {
 			existingToken, err := cfg.GetToken(host)
 			if err == nil && existingToken != "" {
-				maskedExisting := util.MaskToken(existingToken)
+				maskedExisting := ui.MaskToken(existingToken)
 				fmt.Printf("Token already exists for %s: %s\n", host, maskedExisting)
-				fmt.Print("Replace it? (y/N): ")
 
-				var response string
-				fmt.Scanln(&response)
-				if response != "y" && response != "Y" {
+				confirm, err := ui.ReadYesNo("Replace it? (y/N): ")
+				if err != nil {
+					return fmt.Errorf("failed to read confirmation: %w", err)
+				}
+				if !confirm {
 					fmt.Println("Operation cancelled")
 					return nil
 				}
@@ -84,30 +80,14 @@ If a provider is specified or detected, the token will be validated before savin
 		if len(args) == 2 {
 			token = args[1]
 		} else {
-			fmt.Printf("Enter token for %s: ", host)
-			
-			// Check if stdin is a terminal
-			if term.IsTerminal(int(syscall.Stdin)) {
-				// Use secure password input for terminals
-				byteToken, err := term.ReadPassword(int(syscall.Stdin))
-				fmt.Println() // Add newline after password input
-				if err != nil {
-					return fmt.Errorf("failed to read token: %w", err)
-				}
-				token = string(byteToken)
-			} else {
-				// For non-terminal input (like tests or piped input)
-				reader := bufio.NewReader(os.Stdin)
-				tokenBytes, err := reader.ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("failed to read token: %w", err)
-				}
-				token = strings.TrimSuffix(tokenBytes, "\n")
+			var err error
+			token, err = ui.ReadSecureInput(fmt.Sprintf("Enter token for %s: ", host))
+			if err != nil {
+				return fmt.Errorf("failed to read token: %w", err)
 			}
 		}
 
-		// Trim whitespace
-		token = strings.TrimSpace(token)
+		// Check if token is empty
 		if token == "" {
 			return fmt.Errorf("token cannot be empty")
 		}
@@ -152,7 +132,7 @@ If a provider is specified or detected, the token will be validated before savin
 			return fmt.Errorf("failed to set token: %w", err)
 		}
 
-		maskedToken := util.MaskToken(token)
+		maskedToken := ui.MaskToken(token)
 		fmt.Printf("Successfully set token for %s: %s\n", host, maskedToken)
 		fmt.Printf("Config saved to: %s\n", cfg.GetPath())
 

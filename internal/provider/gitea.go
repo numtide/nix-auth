@@ -29,12 +29,12 @@ func NewGiteaProviderForHost(ctx context.Context, client *http.Client, host stri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if it's actually a Gitea provider
 	if provider != nil && provider.Name() == "gitea" {
 		return provider, nil
 	}
-	
+
 	return nil, nil // Not a Gitea instance
 }
 

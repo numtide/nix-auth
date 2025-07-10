@@ -7,6 +7,7 @@ import (
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
+	"github.com/numtide/nix-auth/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -96,10 +97,11 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	existingToken, _ := cfg.GetToken(host)
 	if existingToken != "" && !loginForce {
-		fmt.Printf("A token for %s already exists. Do you want to replace it? [y/N] ", host)
-		var response string
-		fmt.Scanln(&response)
-		if response != "y" && response != "Y" {
+		confirm, err := ui.ReadYesNo(fmt.Sprintf("A token for %s already exists. Do you want to replace it? [y/N] ", host))
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		if !confirm {
 			fmt.Println("Login cancelled.")
 			return nil
 		}

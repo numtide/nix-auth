@@ -45,12 +45,12 @@ func NewForgejoProviderForHost(ctx context.Context, client *http.Client, host st
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if it's actually a Forgejo provider
 	if provider != nil && provider.Name() == "forgejo" {
 		return provider, nil
 	}
-	
+
 	return nil, nil // Not a Forgejo instance
 }
 

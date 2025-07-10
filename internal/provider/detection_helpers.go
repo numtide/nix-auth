@@ -12,7 +12,7 @@ import (
 func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string) (Provider, error) {
 	// Known hosts
 	lowerHost := strings.ToLower(host)
-	
+
 	// Codeberg is known to be Forgejo
 	if lowerHost == "codeberg.org" {
 		return &ForgejoProvider{
@@ -23,7 +23,7 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 			},
 		}, nil
 	}
-	
+
 	// Gitea.com and gitea.io are known Gitea instances
 	if lowerHost == "gitea.com" || lowerHost == "gitea.io" {
 		return &GiteaProvider{
@@ -55,7 +55,7 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return nil, nil // Not a Gitea/Forgejo instance
 		}
-		
+
 		// Check if it's Forgejo (includes "forgejo" in version string)
 		if strings.Contains(strings.ToLower(data.Version), "forgejo") {
 			return &ForgejoProvider{
@@ -66,7 +66,7 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 				},
 			}, nil
 		}
-		
+
 		// Otherwise it's Gitea
 		if data.Version != "" {
 			return &GiteaProvider{

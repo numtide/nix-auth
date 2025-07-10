@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cli/browser"
+	"github.com/numtide/nix-auth/internal/ui"
 )
 
 // PersonalAccessTokenProvider provides common functionality for providers that use Personal Access Tokens
@@ -70,8 +71,7 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 	fmt.Println("5. Copy the generated token")
 	fmt.Println()
 
-	fmt.Println("Press Enter to open your browser and continue...")
-	fmt.Scanln()
+	_, _ = ui.ReadInput("Press Enter to open your browser and continue...")
 
 	tokenURL := fmt.Sprintf("%s/user/settings/applications", p.getBaseURL())
 	fmt.Printf("Opening %s in your browser...\n", tokenURL)
@@ -82,14 +82,12 @@ func (p *PersonalAccessTokenProvider) Authenticate(ctx context.Context) (string,
 	}
 
 	fmt.Println()
-	var token string
-	fmt.Print("Enter your Personal Access Token: ")
 	// Don't use the context here - user input should not be subject to timeout
-	if _, err := fmt.Scanln(&token); err != nil {
+	token, err := ui.ReadSecureInput("Enter your Personal Access Token: ")
+	if err != nil {
 		return "", fmt.Errorf("failed to read token: %w", err)
 	}
 
-	token = strings.TrimSpace(token)
 	if token == "" {
 		return "", fmt.Errorf("token cannot be empty")
 	}

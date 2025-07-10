@@ -9,7 +9,7 @@ import (
 
 	"github.com/numtide/nix-auth/internal/config"
 	"github.com/numtide/nix-auth/internal/provider"
-	"github.com/numtide/nix-auth/internal/util"
+	"github.com/numtide/nix-auth/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -76,7 +76,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		// Validate token and get user info
 		var statusStr string
 		validationStatus, validationErr := prov.ValidateToken(ctx, token)
-		
+
 		switch validationStatus {
 		case provider.ValidationStatusValid:
 			statusStr = "✓ Valid"
@@ -100,7 +100,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		}
 
 		// Mask token for security
-		maskedToken := util.MaskToken(token)
+		maskedToken := ui.MaskToken(token)
 		fmt.Fprintf(w, "  Token\t%s\n", maskedToken)
 
 		// Show token scopes

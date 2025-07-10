@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cli/browser"
+	"github.com/numtide/nix-auth/internal/ui"
 )
 
 // DisplayDeviceCode shows the device code and prompts the user to copy it
@@ -11,8 +12,7 @@ func DisplayDeviceCode(code string) {
 	fmt.Println()
 	fmt.Printf("One-time code: %s\n", code)
 	fmt.Println()
-	fmt.Printf("Copy the code above and press Enter to continue...")
-	fmt.Scanln()
+	_, _ = ui.ReadInput("Copy the code above and press Enter to continue...")
 }
 
 // DisplayURLAndOpenBrowser shows the authorization URL and attempts to open it in the browser

@@ -1,11 +1,10 @@
 package provider
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
+
+	"github.com/numtide/nix-auth/internal/ui"
 )
 
 // NewUnknownProvider creates a new instance of UnknownProvider
@@ -36,22 +35,23 @@ func (u *UnknownProvider) GetScopes() []string {
 func (u *UnknownProvider) Authenticate(ctx context.Context) (string, error) {
 	fmt.Printf("Unable to auto-detect provider type for %s\n\n", u.host)
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Would you like to manually add a token for this host? [y/N] ")
+	confirm, err := ui.ReadYesNo("Would you like to manually add a token for this host? [y/N] ")
+	if err != nil {
+		return "", fmt.Errorf("failed to read confirmation: %w", err)
+	}
 
-	response, _ := reader.ReadString('\n')
-	response = strings.TrimSpace(strings.ToLower(response))
-
-	if response != "y" && response != "yes" {
+	if !confirm {
 		return "", fmt.Errorf("login cancelled")
 	}
 
 	fmt.Println("\nPlease enter your personal access token.")
 	fmt.Println("This token will be saved but cannot be validated automatically.")
-	fmt.Print("\nToken: ")
+	fmt.Println()
 
-	token, _ := reader.ReadString('\n')
-	token = strings.TrimSpace(token)
+	token, err := ui.ReadSecureInput("Token: ")
+	if err != nil {
+		return "", fmt.Errorf("failed to read token: %w", err)
+	}
 
 	if token == "" {
 		return "", fmt.Errorf("token cannot be empty")
