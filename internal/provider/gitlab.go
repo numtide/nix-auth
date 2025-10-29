@@ -117,7 +117,7 @@ func (g *GitLabProvider) Host() string {
 
 func (g *GitLabProvider) GetScopes() []string {
 	// read_api scope allows read access to the API, including private repositories
-	return []string{"read_api"}
+	return []string{"read_api", "read_repository"}
 }
 
 func (g *GitLabProvider) Authenticate(ctx context.Context) (string, error) {
