@@ -124,7 +124,7 @@ func TestNixConfigIntegration_MigrationFromExisting(t *testing.T) {
 access-tokens = github.com=old_token gitlab.com=old_token2
 trusted-users = alice
 `
-	if err := os.WriteFile(configPath, []byte(oldContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(oldContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

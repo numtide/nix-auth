@@ -24,7 +24,7 @@ foo = bar  # inline comment
 `
 		path := filepath.Join(tmpDir, "format.conf")
 
-		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -75,7 +75,7 @@ foo = bar  # inline comment
 include sub.conf`
 		mainPath := filepath.Join(tmpDir, "main.conf")
 
-		if err := os.WriteFile(mainPath, []byte(mainContent), 0600); err != nil {
+		if err := os.WriteFile(mainPath, []byte(mainContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -83,7 +83,7 @@ include sub.conf`
 		subContent := `bar = included`
 		subPath := filepath.Join(tmpDir, "sub.conf")
 
-		if err := os.WriteFile(subPath, []byte(subContent), 0600); err != nil {
+		if err := os.WriteFile(subPath, []byte(subContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -130,7 +130,7 @@ bar = value
 foo = second  # This should win`
 
 		path := filepath.Join(tmpDir, "find.conf")
-		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
 

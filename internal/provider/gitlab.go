@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const tokenPrefix = "OAuth2"
+
 func init() {
 	RegisterProvider("gitlab", Registration{
 		New: func(cfg Config) Provider {
@@ -117,7 +119,7 @@ func (g *GitLabProvider) Host() string {
 
 func (g *GitLabProvider) GetScopes() []string {
 	// read_api scope allows read access to the API, including private repositories
-	return []string{"read_api"}
+	return []string{"read_api", "read_repository"}
 }
 
 func (g *GitLabProvider) Authenticate(ctx context.Context) (string, error) {
@@ -241,7 +243,7 @@ func (g *GitLabProvider) pollForToken(ctx context.Context, clientID string, devi
 					return "", fmt.Errorf("failed to decode token response: %w", err)
 				}
 				resp.Body.Close()
-				return tokenResp.AccessToken, nil
+				return fmt.Sprintf("%s:%s", tokenPrefix, tokenResp.AccessToken), nil
 			}
 
 			var errorResp gitLabErrorResponse
@@ -271,13 +273,25 @@ func (g *GitLabProvider) pollForToken(ctx context.Context, clientID string, devi
 }
 
 func (g *GitLabProvider) ValidateToken(ctx context.Context, token string) (ValidationStatus, error) {
-	resp, err := g.makeGitLabAPIRequest(ctx, token, fmt.Sprintf("%s/api/v4/user", g.getBaseURL()))
+	rawToken, err := g.rawToken(token)
+	if err != nil {
+		return ValidationStatusInvalid, err
+	}
+	resp, err := g.makeGitLabAPIRequest(ctx, rawToken, fmt.Sprintf("%s/api/v4/user", g.getBaseURL()))
 	if err != nil {
 		return ValidationStatusInvalid, fmt.Errorf("failed to validate token: %w", err)
 	}
 	defer resp.Body.Close()
 
 	return ValidationStatusValid, nil
+}
+
+func (g *GitLabProvider) rawToken(token string) (string, error) {
+	splitToken := strings.SplitN(token, ":", 2)
+	if len(splitToken) != 2 || splitToken[0] != tokenPrefix {
+		return "", fmt.Errorf("invalid token, expected it to start with '%s:'", tokenPrefix)
+	}
+	return splitToken[1], nil
 }
 
 func (g *GitLabProvider) GetUserInfo(ctx context.Context, token string) (username, fullName string, err error) {

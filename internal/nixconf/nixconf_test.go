@@ -177,7 +177,7 @@ experimental-features = nix-command flakes
 access-tokens = github.com=old_token
 # More config
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -293,7 +293,7 @@ func TestNixConfig_RemoveLastToken(t *testing.T) {
 	initialContent := `experimental-features = nix-command flakes
 access-tokens = github.com=only_token
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -334,7 +334,7 @@ func TestNixConfig_Backup(t *testing.T) {
 
 	// Create initial config with access tokens to trigger migration
 	initialContent := "experimental-features = nix-command flakes\naccess-tokens = existing.com=token\n"
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -383,7 +383,7 @@ func TestNixConfig_EmptyFile(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "nix.conf")
 
 	// Create empty file
-	if err := os.WriteFile(configPath, []byte(""), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(""), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -469,12 +469,12 @@ func TestNixConfig_InvalidTokenFormat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create main config with include
 			mainContent := "!include access-tokens.conf\n"
-			if err := os.WriteFile(configPath, []byte(mainContent), 0600); err != nil {
+			if err := os.WriteFile(configPath, []byte(mainContent), 0o600); err != nil {
 				t.Fatalf("WriteFile(main) error = %v", err)
 			}
 
 			// Create token file with test content
-			if err := os.WriteFile(tokenPath, []byte(tt.content), 0600); err != nil {
+			if err := os.WriteFile(tokenPath, []byte(tt.content), 0o600); err != nil {
 				t.Fatalf("WriteFile(token) error = %v", err)
 			}
 
@@ -505,7 +505,7 @@ access-tokens = github.com=token1
 # Another comment
 trusted-users = root user
 `
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -746,7 +746,7 @@ extra-option = value
 
 # End of file comment`
 
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -826,7 +826,7 @@ func TestNixConfig_PreservesComplexIndentation(t *testing.T) {
 		access-tokens = github.com=oldtoken
 another-option = value`
 
-	if err := os.WriteFile(configPath, []byte(initialContent), 0600); err != nil {
+	if err := os.WriteFile(configPath, []byte(initialContent), 0o600); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 

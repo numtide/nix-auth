@@ -189,7 +189,7 @@ func (c *ParsedConfig) HasInclude(path string) bool {
 // WriteToFile writes the config back preserving all formatting.
 func (c *ParsedConfig) WriteToFile(path string, lines []ConfigLine) error {
 	// Get original file permissions if it exists
-	const defaultPerms = 0644
+	const defaultPerms = 0o644
 
 	var perms os.FileMode = defaultPerms
 	if info, err := os.Stat(path); err == nil {

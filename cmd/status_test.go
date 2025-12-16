@@ -102,7 +102,7 @@ func createTestConfig(t *testing.T, content string) string {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "nix.conf")
 
-	err := os.WriteFile(configFile, []byte(content), 0600)
+	err := os.WriteFile(configFile, []byte(content), 0o600)
 	if err != nil {
 		t.Fatalf("failed to create config file: %v", err)
 	}
