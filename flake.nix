@@ -41,7 +41,7 @@
 
               src = self;
 
-              vendorHash = "sha256-5X+GG5h9rZTLhDvL6m9LrU5WGT5Ev+aXZ+5ffksBIM8=";
+              vendorHash = pkgs.lib.fileContents ./nix/vendorHash.txt;
 
               meta = with pkgs.lib; {
                 description = "CLI tool to manage access tokens for Nix";
