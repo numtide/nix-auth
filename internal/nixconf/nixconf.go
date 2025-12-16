@@ -119,11 +119,12 @@ func (n *NixConfig) SetToken(host, token string) error {
 	existingTokens := make(map[string]string)
 
 	if tokenValue, exists := config.Settings[accessTokensKey]; exists {
-		var err error
-		existingTokens, err = ParseAccessTokens(tokenValue)
+		parsedTokens, err := ParseAccessTokens(tokenValue)
 		if err != nil {
 			return fmt.Errorf("failed to parse existing tokens: %w", err)
 		}
+
+		existingTokens = parsedTokens
 	}
 
 	// Add/update the token
