@@ -31,15 +31,19 @@ func (m *mockSetTokenProvider) Host() string { return m.host }
 func (m *mockSetTokenProvider) Authenticate(_ context.Context) (string, error) {
 	return "", nil
 }
+
 func (m *mockSetTokenProvider) ValidateToken(_ context.Context, _ string) (provider.ValidationStatus, error) {
 	return m.validateResult, m.validateError
 }
+
 func (m *mockSetTokenProvider) GetUserInfo(_ context.Context, _ string) (string, string, error) {
 	return "", "", nil
 }
+
 func (m *mockSetTokenProvider) GetScopes() []string {
 	return []string{}
 }
+
 func (m *mockSetTokenProvider) GetTokenScopes(_ context.Context, _ string) ([]string, error) {
 	return []string{}, nil
 }
@@ -74,7 +78,8 @@ func runSetTokenTest(t *testing.T, tc struct {
 	expectedOutputs []string
 	expectError     bool
 	errorContains   string
-}) {
+},
+) {
 	t.Helper()
 
 	// Reset flags
@@ -173,7 +178,7 @@ func TestSetTokenBasicOperations(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -190,7 +195,7 @@ func TestSetTokenBasicOperations(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -212,7 +217,7 @@ func TestSetTokenBasicOperations(t *testing.T) {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
 				content := testExistingTokenConfig
-				if err := os.WriteFile(configFile, []byte(content), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(content), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -229,7 +234,7 @@ func TestSetTokenBasicOperations(t *testing.T) {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
 				content := testExistingTokenConfig
-				if err := os.WriteFile(configFile, []byte(content), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(content), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -250,7 +255,7 @@ func TestSetTokenBasicOperations(t *testing.T) {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
 				content := testExistingTokenConfig
-				if err := os.WriteFile(configFile, []byte(content), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(content), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -295,7 +300,7 @@ func TestSetTokenProviderValidation(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -333,7 +338,7 @@ func TestSetTokenProviderValidation(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -371,7 +376,7 @@ func TestSetTokenProviderValidation(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -412,7 +417,7 @@ func TestSetTokenErrorCases(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -427,7 +432,7 @@ func TestSetTokenErrorCases(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile
@@ -446,7 +451,7 @@ func TestSetTokenErrorCases(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "nix.conf")
-				if err := os.WriteFile(configFile, []byte(""), 0600); err != nil {
+				if err := os.WriteFile(configFile, []byte(""), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return configFile

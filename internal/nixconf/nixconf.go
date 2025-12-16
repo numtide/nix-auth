@@ -14,9 +14,9 @@ const (
 	// accessTokensFile is the default name for the separate tokens file.
 	accessTokensFile = "access-tokens.conf"
 	// tokenFilePermissions is the permission mode for the tokens file.
-	tokenFilePermissions = 0600
+	tokenFilePermissions = 0o600
 	// dirPermissions is the permission mode for configuration directories.
-	dirPermissions = 0755
+	dirPermissions = 0o755
 	// backupTimeFormat is the time format used for backup file names.
 	backupTimeFormat = "20060102-150405"
 	// accessTokensKey is the config key for access tokens.
@@ -121,7 +121,6 @@ func (n *NixConfig) SetToken(host, token string) error {
 	if tokenValue, exists := config.Settings[accessTokensKey]; exists {
 		var err error
 		existingTokens, err = ParseAccessTokens(tokenValue)
-
 		if err != nil {
 			return fmt.Errorf("failed to parse existing tokens: %w", err)
 		}

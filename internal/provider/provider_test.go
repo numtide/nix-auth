@@ -82,6 +82,7 @@ func (m *mockProvider) Host() string { return m.host }
 func (m *mockProvider) Authenticate(_ context.Context) (string, error) {
 	return "mock-token", nil
 }
+
 func (m *mockProvider) ValidateToken(_ context.Context, token string) (ValidationStatus, error) {
 	if token == "invalid" {
 		return ValidationStatusInvalid, fmt.Errorf("invalid token")
@@ -89,12 +90,15 @@ func (m *mockProvider) ValidateToken(_ context.Context, token string) (Validatio
 
 	return ValidationStatusValid, nil
 }
+
 func (m *mockProvider) GetUserInfo(_ context.Context, _ string) (string, string, error) {
 	return "mockuser", "Mock User", nil
 }
+
 func (m *mockProvider) GetScopes() []string {
 	return []string{"read", "write"}
 }
+
 func (m *mockProvider) GetTokenScopes(_ context.Context, _ string) ([]string, error) {
 	return []string{"read", "write"}, nil
 }
