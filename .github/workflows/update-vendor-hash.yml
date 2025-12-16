@@ -2,7 +2,7 @@ name: Update vendorHash
 on: pull_request
 jobs:
   dependabot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
       - uses: actions/create-github-app-token@v2
