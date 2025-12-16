@@ -63,38 +63,30 @@
           checks = {
             build = self'.packages.nix-auth;
 
-            go-test =
-              pkgs.runCommand "go-test"
-                {
-                  nativeBuildInputs = [ pkgs.go ];
-                  src = self;
-                }
-                ''
-                  export HOME=$TMPDIR
-                  export GOCACHE=$TMPDIR/go-cache
-                  export GOMODCACHE=$TMPDIR/go-mod-cache
-                  cd $src
-                  go test ./...
-                  touch $out
-                '';
+            go-test = self'.packages.nix-auth.overrideAttrs (old: {
+              name = "go-test";
+              buildPhase = ''
+                HOME=$TMPDIR go test -v ./...
+              '';
+              doCheck = false;
+              installPhase = ''
+                touch $out
+              '';
+              fixupPhase = ":";
+            });
 
-            golangci-lint =
-              pkgs.runCommand "golangci-lint"
-                {
-                  nativeBuildInputs = [
-                    pkgs.go
-                    pkgs.golangci-lint
-                  ];
-                  src = self;
-                }
-                ''
-                  export HOME=$TMPDIR
-                  export GOCACHE=$TMPDIR/go-cache
-                  export GOMODCACHE=$TMPDIR/go-mod-cache
-                  cd $src
-                  golangci-lint run
-                  touch $out
-                '';
+            golangci-lint = self'.packages.nix-auth.overrideAttrs (old: {
+              name = "golangci-lint";
+              nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.golangci-lint ];
+              buildPhase = ''
+                HOME=$TMPDIR golangci-lint run
+              '';
+              doCheck = false;
+              installPhase = ''
+                touch $out
+              '';
+              fixupPhase = ":";
+            });
           };
 
           devShells.default = pkgs.mkShell {
