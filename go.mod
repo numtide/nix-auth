@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/cli/browser v1.3.0
-	github.com/cli/oauth v1.2.0
+	github.com/cli/oauth v1.2.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.38.0
 )
