@@ -27,6 +27,7 @@
       perSystem =
         {
           config,
+          lib,
           pkgs,
           self',
           ...
@@ -42,6 +43,23 @@
               src = self;
 
               vendorHash = pkgs.lib.fileContents ./nix/vendorHash.txt;
+
+              nativeBuildInputs = [ pkgs.installShellFiles ];
+
+              postInstall = lib.optionalString (pkgs.stdenv.hostPlatform.emulatorAvailable pkgs.buildPackages) (
+                let
+                  emulator = pkgs.stdenv.hostPlatform.emulator pkgs.buildPackages;
+                in
+                ''
+                  installShellCompletion --cmd nix-auth \
+                    --bash <(${emulator} $out/bin/nix-auth completion bash) \
+                    --fish <(${emulator} $out/bin/nix-auth completion fish) \
+                    --zsh <(${emulator} $out/bin/nix-auth completion zsh)
+
+                  mkdir -p $out/share/powershell
+                  ${emulator} $out/bin/nix-auth completion powershell > $out/share/powershell/nix-auth.Completion.ps1
+                ''
+              );
 
               meta = with pkgs.lib; {
                 description = "CLI tool to manage access tokens for Nix";
