@@ -155,7 +155,7 @@ func TestMaskToken(t *testing.T) {
 func TestMaskTokenSecurity(t *testing.T) {
 	// Test that the function handles Unicode correctly
 	t.Run("unicode token", func(t *testing.T) {
-		token := "test_こんにちは世界1234567890" //nolint:gosec // test token
+		token := "test_こんにちは世界1234567890"
 		result := MaskToken(token)
 		// Should show first 4 bytes, not break Unicode
 		if result != "test********" {

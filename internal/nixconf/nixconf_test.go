@@ -187,7 +187,7 @@ access-tokens = github.com=old_token
 	}
 
 	// Update existing token
-	newToken := "new_github_token" //nolint:gosec // test token
+	newToken := "new_github_token"
 	if err := cfg.SetToken("github.com", newToken); err != nil {
 		t.Fatalf("SetToken() error = %v", err)
 	}

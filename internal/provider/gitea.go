@@ -6,18 +6,18 @@ import (
 )
 
 func init() {
-	RegisterProvider("gitea", Registration{
+	RegisterProvider(giteaName, Registration{
 		New: func(cfg Config) Provider {
 			return &GiteaProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-					providerName: "gitea",
-					defaultHost:  "gitea.com",
+					providerName: giteaName,
+					defaultHost:  giteaHost,
 					host:         cfg.Host,
 				},
 			}
 		},
 		Detect:      NewGiteaProviderForHost,
-		DefaultHost: "gitea.com",
+		DefaultHost: giteaHost,
 	})
 }
 
@@ -31,7 +31,7 @@ func NewGiteaProviderForHost(ctx context.Context, client *http.Client, host stri
 	}
 
 	// Check if it's actually a Gitea provider
-	if provider != nil && provider.Name() == "gitea" {
+	if provider != nil && provider.Name() == giteaName {
 		return provider, nil
 	}
 

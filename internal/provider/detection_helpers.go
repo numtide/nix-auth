@@ -14,22 +14,22 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 	lowerHost := strings.ToLower(host)
 
 	// Codeberg is known to be Forgejo
-	if lowerHost == "codeberg.org" {
+	if lowerHost == codebergHost {
 		return &ForgejoProvider{
 			PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-				providerName: "forgejo",
-				defaultHost:  "codeberg.org",
+				providerName: forgejoName,
+				defaultHost:  codebergHost,
 				host:         host,
 			},
 		}, nil
 	}
 
 	// Gitea.com and gitea.io are known Gitea instances
-	if lowerHost == "gitea.com" || lowerHost == "gitea.io" {
+	if lowerHost == giteaHost || lowerHost == "gitea.io" {
 		return &GiteaProvider{
 			PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-				providerName: "gitea",
-				defaultHost:  "gitea.com",
+				providerName: giteaName,
+				defaultHost:  giteaHost,
 				host:         host,
 			},
 		}, nil
@@ -59,10 +59,10 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 		}
 
 		// Check if it's Forgejo (includes "forgejo" in version string)
-		if strings.Contains(strings.ToLower(data.Version), "forgejo") {
+		if strings.Contains(strings.ToLower(data.Version), forgejoName) {
 			return &ForgejoProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-					providerName: "forgejo",
+					providerName: forgejoName,
 					defaultHost:  "",
 					host:         host,
 				},
@@ -73,8 +73,8 @@ func detectGiteaOrForgejo(ctx context.Context, client *http.Client, host string)
 		if data.Version != "" {
 			return &GiteaProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-					providerName: "gitea",
-					defaultHost:  "gitea.com",
+					providerName: giteaName,
+					defaultHost:  giteaHost,
 					host:         host,
 				},
 			}, nil

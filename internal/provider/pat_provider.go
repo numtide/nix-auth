@@ -52,7 +52,7 @@ func (p *PersonalAccessTokenProvider) getAPIURL() string {
 
 func (p *PersonalAccessTokenProvider) makeAPIRequest(ctx context.Context, token string, endpoint string) (*http.Response, error) {
 	headers := map[string]string{
-		"Accept": "application/json",
+		headerAccept: "application/json",
 	}
 
 	return makeAuthenticatedRequest(ctx, "GET", endpoint, "token "+token, headers)

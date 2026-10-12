@@ -17,6 +17,14 @@ const (
 	ValidationStatusUnknown
 )
 
+const (
+	forgejoName  = "forgejo"
+	giteaName    = "gitea"
+	codebergHost = "codeberg.org"
+	giteaHost    = "gitea.com"
+	headerAccept = "Accept"
+)
+
 // Provider defines the interface for authentication providers.
 type Provider interface {
 	// Name returns the provider name (e.g., "github", "gitlab")
@@ -129,7 +137,7 @@ func List() []string {
 func ListForDetection() []string {
 	// Define preferred order for detection
 	// GitHub and GitLab are tried first as they're most common
-	preferredOrder := []string{"github", "gitlab", "gitea", "forgejo"}
+	preferredOrder := []string{"github", "gitlab", giteaName, forgejoName}
 
 	result := []string{}
 	// Add providers in preferred order if they exist
