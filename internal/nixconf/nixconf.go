@@ -321,7 +321,7 @@ func (n *NixConfig) createBackup(src, dst string) error {
 		perms = info.Mode()
 	}
 
-	return os.WriteFile(dst, input, perms)
+	return os.WriteFile(dst, input, perms) //nolint:gosec // backup path derived from the trusted config path
 }
 
 // expandTilde expands ~ to the user's home directory.

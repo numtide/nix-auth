@@ -101,7 +101,7 @@ type gitLabErrorResponse struct {
 // makeGitLabAPIRequest is a helper function to make authenticated requests to GitLab API
 func (g *GitLabProvider) makeGitLabAPIRequest(ctx context.Context, token string, endpoint string) (*http.Response, error) {
 	headers := map[string]string{
-		"Accept": "application/json",
+		headerAccept: "application/json",
 	}
 	return makeAuthenticatedRequest(ctx, "GET", endpoint, "Bearer "+token, headers)
 }
@@ -178,7 +178,7 @@ func (g *GitLabProvider) requestDeviceCode(ctx context.Context, clientID string)
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set(headerAccept, "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -229,7 +229,7 @@ func (g *GitLabProvider) pollForToken(ctx context.Context, clientID string, devi
 			}
 
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			req.Header.Set("Accept", "application/json")
+			req.Header.Set(headerAccept, "application/json")
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -321,7 +321,7 @@ func (g *GitLabProvider) GetTokenScopes(ctx context.Context, token string) ([]st
 	}
 
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set(headerAccept, "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

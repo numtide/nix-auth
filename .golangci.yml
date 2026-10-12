@@ -58,6 +58,14 @@ linters:
     - wrapcheck      # Checks that errors returned from external packages are wrapped
 
   exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+      - path: _test\.go
+        linters:
+          - gosec
+        text: G101
     paths:
       - vendor
       - .git
@@ -73,6 +81,14 @@ formatters:
     - goimports      # Check import statements are formatted according to the 'goimport' command
 
   exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+      - path: _test\.go
+        linters:
+          - gosec
+        text: G101
     paths:
       - vendor
       - .git

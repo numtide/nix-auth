@@ -41,7 +41,7 @@ func NewGitHubProviderForHost(ctx context.Context, client *http.Client, host str
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set(headerAccept, "application/vnd.github.v3+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -90,7 +90,7 @@ func (g *GitHubProvider) getAPIURL() string {
 // makeGitHubAPIRequest is a helper function to make authenticated requests to GitHub API
 func (g *GitHubProvider) makeGitHubAPIRequest(ctx context.Context, token string, endpoint string) (*http.Response, error) {
 	headers := map[string]string{
-		"Accept": "application/vnd.github.v3+json",
+		headerAccept: "application/vnd.github.v3+json",
 	}
 	return makeAuthenticatedRequest(ctx, "GET", endpoint, "token "+token, headers)
 }

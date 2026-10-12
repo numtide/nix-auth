@@ -6,11 +6,11 @@ import (
 )
 
 func init() {
-	RegisterProvider("forgejo", Registration{
+	RegisterProvider(forgejoName, Registration{
 		New: func(cfg Config) Provider {
 			return &ForgejoProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-					providerName: "forgejo",
+					providerName: forgejoName,
 					defaultHost:  "", // No default host for Forgejo
 					host:         cfg.Host,
 				},
@@ -25,15 +25,15 @@ func init() {
 		New: func(cfg Config) Provider {
 			return &ForgejoProvider{
 				PersonalAccessTokenProvider: PersonalAccessTokenProvider{
-					providerName: "forgejo",
-					defaultHost:  "codeberg.org",
+					providerName: forgejoName,
+					defaultHost:  codebergHost,
 					host:         cfg.Host,
 				},
 			}
 		},
 		// No detector for codeberg alias
 		Detect:      nil,
-		DefaultHost: "codeberg.org",
+		DefaultHost: codebergHost,
 	})
 }
 
@@ -47,7 +47,7 @@ func NewForgejoProviderForHost(ctx context.Context, client *http.Client, host st
 	}
 
 	// Check if it's actually a Forgejo provider
-	if provider != nil && provider.Name() == "forgejo" {
+	if provider != nil && provider.Name() == forgejoName {
 		return provider, nil
 	}
 
