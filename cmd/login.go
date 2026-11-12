@@ -52,9 +52,11 @@ var (
 	loginClientID string
 	loginForce    bool
 	loginDryRun   bool
+	loginNetrc    bool
 )
 
 func init() {
+	loginCmd.Flags().BoolVar(&loginNetrc, "netrc", false, "Also write the token to the netrc file (for binary caches and fetchurl)")
 	loginCmd.Flags().StringVar(&loginProvider, "provider", "auto", "Provider type when using a host (auto, github, gitlab, gitea, forgejo, codeberg)")
 	loginCmd.Flags().StringVar(&loginClientID, "client-id", "", "OAuth client ID (required for GitHub Enterprise, optional for others)")
 	loginCmd.Flags().BoolVar(&loginForce, "force", false, "Skip confirmation prompt when replacing existing tokens")
@@ -149,6 +151,12 @@ func runLogin(_ *cobra.Command, args []string) error {
 
 	fmt.Printf("\nSuccessfully authenticated and saved token for %s\n", host)
 	fmt.Printf("Token saved to: %s\n", cfg.GetPath())
+
+	if loginNetrc {
+		if err := saveNetrc(cfg, host, defaultNetrcLogin, token); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

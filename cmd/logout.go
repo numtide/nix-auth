@@ -87,8 +87,16 @@ func logoutInteractive(cfg *nixconf.NixConfig) error {
 func removeToken(cfg *nixconf.NixConfig, host string) error {
 	fmt.Printf("Removing token for %s...\n", host)
 
-	if err := cfg.RemoveToken(host); err != nil {
-		return fmt.Errorf("failed to remove token: %w", err)
+	tokenErr := cfg.RemoveToken(host)
+
+	netrcRemoved, netrcErr := removeNetrc(cfg, host)
+	if netrcErr != nil {
+		return fmt.Errorf("failed to remove netrc entry: %w", netrcErr)
+	}
+
+	// Fail only if the host was in neither store.
+	if tokenErr != nil && !netrcRemoved {
+		return fmt.Errorf("failed to remove token: %w", tokenErr)
 	}
 
 	fmt.Printf("✓ Successfully removed token for %s\n", host)

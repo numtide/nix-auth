@@ -18,6 +18,8 @@ const (
 var (
 	setTokenForce    bool
 	setTokenProvider string
+	setTokenNetrc    bool
+	setTokenUser     string
 )
 
 var setTokenCmd = &cobra.Command{
@@ -26,7 +28,11 @@ var setTokenCmd = &cobra.Command{
 	Long: `Set an access token for a specific host.
 
 The token can be provided as an argument or entered interactively for security.
-If a provider is specified or detected, the token will be validated before saving.`,
+If a provider is specified or detected, the token will be validated before saving.
+
+With --netrc the credentials are also written to the netrc file next to nix.conf.
+With --user the host is treated as a Basic Auth service (e.g. a private binary cache):
+the credentials are written only to the netrc file, with no provider validation.`,
 	Example: `  # Set token directly
   nix-auth set-token github.com ghp_xxxxxxxxxxxx
 
@@ -37,7 +43,13 @@ If a provider is specified or detected, the token will be validated before savin
   nix-auth set-token github.com ghp_xxxxxxxxxxxx --force
 
   # Specify provider for validation
-  nix-auth set-token git.company.com --provider gitlab`,
+  nix-auth set-token git.company.com --provider gitlab
+
+  # Also write to netrc
+  nix-auth set-token github.com --netrc
+
+  # Basic Auth binary cache (netrc only)
+  nix-auth set-token cache.example.com --user alice`,
 	Args: cobra.RangeArgs(minSetTokenArgs, maxSetTokenArgs),
 	RunE: func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
@@ -47,6 +59,10 @@ If a provider is specified or detected, the token will be validated before savin
 		cfg, err := nixconf.New(configPath)
 		if err != nil {
 			return fmt.Errorf("failed to initialize config: %w", err)
+		}
+
+		if setTokenUser != "" {
+			return setBasicAuth(cfg, host, args)
 		}
 
 		// Check if token already exists
@@ -141,11 +157,45 @@ If a provider is specified or detected, the token will be validated before savin
 		fmt.Printf("Successfully set token for %s: %s\n", host, maskedToken)
 		fmt.Printf("Config saved to: %s\n", cfg.GetTokenFilePath())
 
+		if setTokenNetrc {
+			return saveNetrc(cfg, host, defaultNetrcLogin, token)
+		}
+
 		return nil
 	},
 }
 
 func init() {
 	setTokenCmd.Flags().BoolVarP(&setTokenForce, "force", "f", false, "Force replace existing token without confirmation")
+	setTokenCmd.Flags().BoolVar(&setTokenNetrc, "netrc", false, "Also write the token to the netrc file")
+	setTokenCmd.Flags().StringVar(&setTokenUser, "user", "", "Basic Auth username; writes only to the netrc file")
 	setTokenCmd.Flags().StringVarP(&setTokenProvider, "provider", "p", "", "Specify provider for token validation (e.g., github, gitlab)")
+}
+
+// setBasicAuth stores user/password for a Basic Auth host in the netrc file only.
+func setBasicAuth(cfg *nixconf.NixConfig, host string, args []string) error {
+	var password string
+
+	if len(args) == maxSetTokenArgs {
+		password = args[1]
+	} else {
+		var err error
+
+		password, err = ui.ReadSecureInput(fmt.Sprintf("Enter password for %s@%s: ", setTokenUser, host))
+		if err != nil {
+			return fmt.Errorf("failed to read password: %w", err)
+		}
+	}
+
+	if password == "" {
+		return fmt.Errorf("password cannot be empty")
+	}
+
+	if err := saveNetrc(cfg, host, setTokenUser, password); err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully set credentials for %s (user %s)\n", host, setTokenUser)
+
+	return nil
 }

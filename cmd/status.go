@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/numtide/nix-auth/internal/netrc"
 	"github.com/numtide/nix-auth/internal/nixconf"
 	"github.com/numtide/nix-auth/internal/provider"
 	"github.com/numtide/nix-auth/internal/ui"
@@ -105,6 +106,8 @@ func showHostStatus(ctx context.Context, host string, cfg *nixconf.NixConfig) {
 
 	providerName := prov.Name()
 
+	defer showNetrcStatus(w, host, cfg)
+
 	token, err := cfg.GetToken(host)
 	if err != nil {
 		showTokenError(w, providerName, err)
@@ -190,4 +193,16 @@ func showTokenScopes(ctx context.Context, w *tabwriter.Writer, prov provider.Pro
 	default:
 		_, _ = fmt.Fprintf(w, "  Scopes\t%s\n", strings.Join(scopes, ", "))
 	}
+}
+
+// showNetrcStatus shows the netrc entry for a host, if there is one.
+func showNetrcStatus(w *tabwriter.Writer, host string, cfg *nixconf.NixConfig) {
+	file := netrc.New(cfg.GetNetrcFilePath())
+
+	entry, ok, err := file.Get(host)
+	if err != nil || !ok {
+		return
+	}
+
+	_, _ = fmt.Fprintf(w, "  Netrc\t%s (login %s)\n", file.Path(), entry.Login)
 }

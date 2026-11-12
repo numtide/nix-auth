@@ -337,3 +337,76 @@ func expandTilde(path string) string {
 
 	return path
 }
+
+const (
+	// netrcFile is the default name of the netrc file next to nix.conf.
+	netrcFile = "netrc"
+	// netrcFileKey is the config key pointing Nix at a netrc file.
+	netrcFileKey = "netrc-file"
+)
+
+// ErrNetrcFileConflict is returned when nix.conf already sets netrc-file to a different path.
+var ErrNetrcFileConflict = fmt.Errorf("%s is already set to a different path", netrcFileKey)
+
+// GetNetrcFilePath returns the default path of the netrc file managed by nix-auth.
+func (n *NixConfig) GetNetrcFilePath() string {
+	return filepath.Join(filepath.Dir(n.mainPath), netrcFile)
+}
+
+// EnsureNetrcFile makes sure nix.conf contains `netrc-file = <default path>`.
+// It never overrides an existing, different netrc-file setting: in that case
+// it returns the configured path together with ErrNetrcFileConflict.
+// It reports whether nix.conf was modified.
+func (n *NixConfig) EnsureNetrcFile() (bool, string, error) {
+	want := n.GetNetrcFilePath()
+
+	config, err := n.parser.ParseFile(n.mainPath)
+	mainFileExists := err == nil
+
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return false, "", fmt.Errorf("failed to parse config: %w", err)
+		}
+
+		config = NewParsedConfig()
+	}
+
+	if current, ok := config.Settings[netrcFileKey]; ok {
+		if expandTilde(current) == want {
+			return false, current, nil
+		}
+
+		return false, current, ErrNetrcFileConflict
+	}
+
+	if err := os.MkdirAll(filepath.Dir(n.mainPath), dirPermissions); err != nil {
+		return false, "", fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	if mainFileExists {
+		backupPath := fmt.Sprintf("%s.backup-%s", n.mainPath, time.Now().Format(backupTimeFormat))
+		if err := n.createBackup(n.mainPath, backupPath); err != nil {
+			return false, "", fmt.Errorf("failed to create backup: %w", err)
+		}
+
+		fmt.Printf("Created backup: %s\n", backupPath)
+	}
+
+	// Only rewrite lines that belong to the main file, not to included files.
+	absMain, _ := filepath.Abs(n.mainPath)
+	lines := make([]ConfigLine, 0, len(config.Lines)+1)
+
+	for _, l := range config.Lines {
+		if l.SourceFile == absMain {
+			lines = append(lines, l)
+		}
+	}
+
+	lines = append(lines, ConfigLine{Raw: netrcFileKey + " = " + want, SourceFile: n.mainPath})
+
+	if err := config.WriteToFile(n.mainPath, lines); err != nil {
+		return false, "", fmt.Errorf("failed to update main config: %w", err)
+	}
+
+	return true, want, nil
+}
